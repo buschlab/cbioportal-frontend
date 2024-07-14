@@ -55,6 +55,7 @@ export enum PatientViewPageTabs {
     Mtb = 'mtb',
     FollowUp = 'followUp',
     ClinicalTrialsGov = 'clinicaltrialsGov',
+    Similarity = 'similarity',
 }
 
 export const PatientViewResourceTabPrefix = 'openResource_';
@@ -875,6 +876,25 @@ export function tabs(
             />
         </MSKTab>
     );
+
+    pageComponent.studyViewPageStore.getDataForClinicalDataTab.isComplete &&
+        tabs.push(
+            <MSKTab
+                key={44}
+                id={PatientViewPageTabs.Similarity}
+                linkText={'Similarity'}
+                unmountOnHide={false}
+            >
+                <div>
+                    {
+                        pageComponent.studyViewPageStore
+                            .getDataForClinicalDataTab.result.length
+                    }
+                    {pageComponent.studyViewPageStore.studyIds.length}
+                    {pageComponent.studyViewPageStore.selectedPatients.length}
+                </div>
+            </MSKTab>
+        );
 
     pageComponent.resourceTabs.component &&
         /* @ts-ignore */

@@ -28,7 +28,7 @@ import {
 } from '../../shared/api/urls';
 import { PageLayout } from '../../shared/components/PageLayout/PageLayout';
 import Helmet from 'react-helmet';
-import { getServerConfig } from '../../config/config';
+import { getServerConfig, ServerConfigHelpers } from '../../config/config';
 import autobind from 'autobind-decorator';
 import { showCustomTab } from '../../shared/lib/customTabs';
 import { StudyLink } from '../../shared/components/StudyLink/StudyLink';
@@ -64,6 +64,9 @@ import setWindowVariable from 'shared/lib/setWindowVariable';
 import { getNavCaseIdsCache } from 'shared/lib/handleLongUrls';
 import PatientViewPageHeader from 'pages/patientView/PatientViewPageHeader';
 import { MAX_URL_LENGTH } from 'pages/studyView/studyPageHeader/ActionButtons';
+import { StudyViewPageStore } from 'pages/studyView/StudyViewPageStore';
+import { StudyView } from 'config/IAppConfig';
+import StudyViewURLWrapper from 'pages/studyView/StudyViewURLWrapper';
 
 export interface IPatientViewPageProps {
     routing: any;
@@ -149,16 +152,21 @@ export class PatientViewPageInner extends React.Component<
     // use this wrapper rather than interacting with the url directly
     @observable
     public urlWrapper: PatientViewUrlWrapper;
+    public studyViewUrlWrapper: StudyViewURLWrapper;
     public patientViewMutationDataStore: PatientViewMutationsDataStore;
     public patientViewCnaDataStore: PatientViewCnaDataStore;
 
     public patientViewPageStore: PatientViewPageStore;
+    public studyViewPageStore: StudyViewPageStore;
 
     constructor(props: IPatientViewPageProps) {
         super(props);
         makeObservable(this);
 
         this.urlWrapper = new PatientViewUrlWrapper(props.routing);
+        setWindowVariable('urlWrapper', this.urlWrapper);
+
+        this.studyViewUrlWrapper = new StudyViewURLWrapper(props.routing);
         setWindowVariable('urlWrapper', this.urlWrapper);
 
         this.patientViewPageStore = new PatientViewPageStore(
@@ -168,6 +176,13 @@ export class PatientViewPageInner extends React.Component<
             this.urlWrapper.query.sampleId,
             props.cohortIds
         );
+
+        this.studyViewPageStore = new StudyViewPageStore(
+            this.props.appStore,
+            ServerConfigHelpers.sessionServiceIsEnabled(),
+            this.studyViewUrlWrapper
+        );
+        setWindowVariable('studyViewPageStore', this.studyViewPageStore);
 
         // views  don't fire the getData callback (first arg) until it's known that
         // mutation data is loaded
