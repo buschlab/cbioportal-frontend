@@ -5,6 +5,7 @@ import { PaginationControls } from '../../shared/components/paginationControls/P
 import { IColumnVisibilityDef } from 'shared/components/columnVisibilityControls/ColumnVisibilityControls';
 import {
     DefaultTooltip,
+    onMobxPromise,
     toggleColumnVisibility,
 } from 'cbioportal-frontend-commons';
 import {
@@ -34,6 +35,7 @@ import { showCustomTab } from '../../shared/lib/customTabs';
 import { StudyLink } from '../../shared/components/StudyLink/StudyLink';
 import { QueryParams } from 'url';
 import { AppStore } from '../../AppStore';
+import { parse } from 'query-string';
 import request from 'superagent';
 import { remoteData, getBrowserWindow } from 'cbioportal-frontend-commons';
 import 'cbioportal-frontend-commons/dist/styles.css';
@@ -64,9 +66,13 @@ import setWindowVariable from 'shared/lib/setWindowVariable';
 import { getNavCaseIdsCache } from 'shared/lib/handleLongUrls';
 import PatientViewPageHeader from 'pages/patientView/PatientViewPageHeader';
 import { MAX_URL_LENGTH } from 'pages/studyView/studyPageHeader/ActionButtons';
-import { StudyViewPageStore } from 'pages/studyView/StudyViewPageStore';
+import {
+    StudyViewPageStore,
+    StudyViewURLQuery,
+} from 'pages/studyView/StudyViewPageStore';
 import { StudyView } from 'config/IAppConfig';
 import StudyViewURLWrapper from 'pages/studyView/StudyViewURLWrapper';
+import { trackEvent } from 'shared/lib/tracking';
 
 export interface IPatientViewPageProps {
     routing: any;
@@ -159,6 +165,26 @@ export class PatientViewPageInner extends React.Component<
     public patientViewPageStore: PatientViewPageStore;
     public studyViewPageStore: StudyViewPageStore;
 
+    private getFilterJsonFromPostData(): string | undefined {
+        let filterJson: string | undefined;
+
+        const parsedFilterJson = _.unescape(
+            getBrowserWindow()?.postData?.filterJson
+        );
+
+        if (parsedFilterJson) {
+            try {
+                JSON.parse(parsedFilterJson);
+                filterJson = parsedFilterJson;
+            } catch (error) {
+                console.error(
+                    `PostData.filterJson does not have valid JSON, error: ${error}`
+                );
+            }
+        }
+        return filterJson;
+    }
+
     constructor(props: IPatientViewPageProps) {
         super(props);
         makeObservable(this);
@@ -182,7 +208,78 @@ export class PatientViewPageInner extends React.Component<
             ServerConfigHelpers.sessionServiceIsEnabled(),
             this.studyViewUrlWrapper
         );
-        setWindowVariable('studyViewPageStore', this.studyViewPageStore);
+
+        const query = props.routing.query;
+        const hash = props.routing.location.hash;
+        // clear hash if any
+        props.routing.location.hash = '';
+        const newStudyViewFilter: StudyViewURLQuery = _.pick(query, [
+            'id',
+            'studyId',
+            'cancer_study_id',
+            'filterAttributeId',
+            'filterValues',
+        ]);
+
+        newStudyViewFilter.filterJson = query['filters'];
+
+        let hashString: string = hash || getBrowserWindow().studyPageFilter;
+        delete (window as any).studyPageFilter;
+
+        if (hashString) {
+            const params = parse(hashString) as Partial<StudyViewURLQuery>;
+
+            if (params.filterJson) {
+                newStudyViewFilter.filterJson = params.filterJson;
+            }
+            if (params.sharedGroups) {
+                newStudyViewFilter.sharedGroups = params.sharedGroups;
+            }
+            if (params.sharedCustomData) {
+                newStudyViewFilter.sharedCustomData = params.sharedCustomData;
+            }
+        }
+
+        // Overrite filterJson from URL with what is defined in postData
+        const postDataFilterJson = this.getFilterJsonFromPostData();
+        if (postDataFilterJson) {
+            newStudyViewFilter.filterJson = postDataFilterJson;
+        }
+
+        let updateStoreFromURLPromise = remoteData(() => Promise.resolve([]));
+        if (
+            !_.isEqual(
+                newStudyViewFilter,
+                this.studyViewPageStore.studyViewQueryFilter
+            )
+        ) {
+            this.studyViewPageStore.studyViewQueryFilter = newStudyViewFilter;
+            updateStoreFromURLPromise = remoteData(async () => {
+                await this.studyViewPageStore.updateStoreFromURL(
+                    newStudyViewFilter
+                );
+                return [];
+            });
+        }
+
+        onMobxPromise(
+            [
+                this.studyViewPageStore.queriedPhysicalStudyIds,
+                updateStoreFromURLPromise,
+            ],
+            (strArr: string[]) => {
+                this.studyViewPageStore.initializeReaction();
+                trackEvent({
+                    eventName: 'studyPageLoad',
+                    parameters: {
+                        studies:
+                            this.studyViewPageStore.queriedPhysicalStudies.result
+                                .map(s => s.studyId)
+                                .join(',') + ',',
+                    },
+                });
+            }
+        );
 
         // views  don't fire the getData callback (first arg) until it's known that
         // mutation data is loaded
