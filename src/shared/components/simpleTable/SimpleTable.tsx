@@ -25,7 +25,7 @@ export default class SimpleTable extends React.Component<
                       <tr key="0">
                           <td
                               style={{ textAlign: 'center' }}
-                              colSpan={headers.length}
+                              colSpan={headers.length * 2}
                           >
                               {noRowsText || 'There are no results.'}
                           </td>

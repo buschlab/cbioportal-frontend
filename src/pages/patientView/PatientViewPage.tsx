@@ -317,12 +317,37 @@ export class PatientViewPageInner extends React.Component<
 
     @computed
     public get shouldShowMtbTab(): boolean {
-        return true;
+        return (
+            this.pageStore.mutationData.isComplete &&
+            this.pageStore.discreteCNAData.isComplete &&
+            (this.pageStore.oncoKbData.isComplete ||
+                this.pageStore.oncoKbData.isError) &&
+            (this.pageStore.mtbs.isComplete || this.pageStore.mtbs.isError) &&
+            (this.pageStore.cnaOncoKbData.isComplete ||
+                this.pageStore.cnaOncoKbData.isError)
+        );
     }
 
     @computed
     public get shouldShowFollowUpTab(): boolean {
-        return true;
+        return (
+            this.pageStore.mutationData.isComplete &&
+            this.pageStore.followUps.isComplete &&
+            this.pageStore.discreteCNAData.isComplete &&
+            (this.pageStore.oncoKbData.isComplete ||
+                this.pageStore.oncoKbData.isError) &&
+            (this.pageStore.mtbs.isComplete || this.pageStore.mtbs.isError) &&
+            (this.pageStore.cnaOncoKbData.isComplete ||
+                this.pageStore.cnaOncoKbData.isError)
+        );
+    }
+
+    @computed
+    public get shouldShowPatientSimilarity(): boolean {
+        return (
+            //this.pageStore.similarPatientsPage.isComplete
+            true
+        );
     }
 
     @autobind

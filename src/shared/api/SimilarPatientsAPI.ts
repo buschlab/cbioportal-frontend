@@ -1,0 +1,203 @@
+import {
+    IMtb,
+    IDeletions,
+    ITherapyRecommendation,
+    IFollowUp,
+} from 'cbioportal-utils';
+import * as request from 'superagent';
+import { fetchTrialMatchesUsingPOST } from './MatchMinerAPI';
+import client from './cbioportalClientInstance';
+import defaultClient from './cbioportalClientInstance';
+import {
+    ClinicalData,
+    CBioPortalAPI,
+    MutationFilter,
+    Mutation,
+} from 'cbioportal-ts-api-client';
+import {
+    concatMutationData,
+    existsSomeMutationWithAscnPropertyInCollection,
+    fetchClinicalData,
+    fetchClinicalDataForPatient,
+    fetchCnaOncoKbData,
+    fetchCnaOncoKbDataForOncoprint,
+    fetchCopyNumberData,
+    fetchCopyNumberSegments,
+    fetchCosmicData,
+    fetchDiscreteCNAData,
+    fetchGisticData,
+    fetchMutationData,
+    fetchMutSigData,
+    fetchOncoKbCancerGenes,
+    fetchOncoKbData,
+    fetchOncoKbDataForOncoprint,
+    fetchOncoKbInfo,
+    fetchReferenceGenomeGenes,
+    fetchSamplesForPatient,
+    fetchStudiesForSamplesWithoutCancerTypeClinicalData,
+    fetchVariantAnnotationsIndexedByGenomicLocation,
+    filterAndAnnotateMolecularData,
+    filterAndAnnotateMutations,
+    findDiscreteMolecularProfile,
+    findMolecularProfileIdDiscrete,
+    findMrnaRankMolecularProfileId,
+    findMutationMolecularProfile,
+    findSamplesWithoutCancerTypeClinicalData,
+    findUncalledMutationMolecularProfileId,
+    generateUniqueSampleKeyToTumorTypeMap,
+    getGenomeNexusUrl,
+    getOtherBiomarkersQueryId,
+    getSampleClinicalDataMapByKeywords,
+    getSampleClinicalDataMapByThreshold,
+    getSampleTumorTypeMap,
+    groupBySampleId,
+    makeGetOncoKbCnaAnnotationForOncoprint,
+    makeGetOncoKbMutationAnnotationForOncoprint,
+    makeIsHotspotForOncoprint,
+    makeStudyToCancerTypeMap,
+    mapSampleIdToClinicalData,
+    mergeDiscreteCNAData,
+    mergeMutations,
+    mergeMutationsIncludingUncalled,
+    ONCOKB_DEFAULT,
+    generateStructuralVariantId,
+    fetchStructuralVariantOncoKbData,
+    parseOtherBiomarkerQueryId,
+    tumorTypeResolver,
+    evaluatePutativeDriverInfoWithHotspots,
+    evaluatePutativeDriverInfo,
+} from 'shared/lib/StoreUtils';
+
+export interface SimilarPatient {
+    patient_id: string;
+    study_id: string;
+    age: number;
+    gender: string;
+    name: string;
+    cancertype: string;
+}
+
+export async function fetchPatientsPage(
+    page: number = 0,
+    pageSize: number = 10,
+    client: CBioPortalAPI = defaultClient
+) {
+    //'keyword'?: string;
+    //'projection'?: "ID" | "SUMMARY" | "DETAILED" | "META";
+    //'pageSize'?: number;
+    //'pageNumber'?: number;
+    //'direction'?: "ASC" | "DESC";
+    //$queryParameters?: any;
+    var patients: SimilarPatient[] = [];
+
+    const rawPatients = await client.getAllPatientsUsingGET({
+        projection: 'SUMMARY',
+        pageSize: pageSize,
+        pageNumber: page,
+    });
+
+    const totalPages: number = 2;
+
+    //console.log(rawPatients)
+
+    rawPatients.forEach(patient => {
+        (async function(patient) {
+            // GET CLINICAL DATA
+            const currentClinicalData = await client.getAllClinicalDataOfPatientInStudyUsingGET(
+                {
+                    studyId: patient.studyId,
+                    patientId: patient.patientId,
+                }
+            );
+            var clinicalDataDict = clinicalData2Dict(currentClinicalData);
+
+            //console.group('### TEST ###');
+            //console.log(clinicalDataDict)
+            //console.groupEnd();
+
+            // GET SAMPLES / molecular profile ids
+
+            // GET MUTATIONS
+            const mutationFilter = {
+                sampleIds: this.sampleIds,
+            } as MutationFilter;
+
+            //const mutationData = await client.fetchMutationsInMolecularProfileUsingPOST({
+            //    molecularProfileId,
+            //    mutationFilter,
+            //    projection: 'DETAILED',
+            //})
+
+            const mutationData = await fetchMutationData(
+                mutationFilter,
+                molecularProfileId
+            );
+
+            // COLLECT DATA
+            patients.push({
+                patient_id: patient.patientId,
+                study_id: patient.studyId,
+                age: getOrDefault(clinicalDataDict, 'AGE', undefined, Number),
+                gender: getOrDefault(clinicalDataDict, 'GENDER'),
+                name: getOrDefault(clinicalDataDict, 'PATIENT_DISPLAY_NAME'),
+                cancertype: getOrDefault(clinicalDataDict, 'TEST'),
+            });
+        })(patient);
+
+        console.group('### TEST INITIAL PATIENTS ###');
+        console.log(patients);
+        console.groupEnd();
+    });
+
+    return { patients: patients, totalPages: totalPages };
+}
+
+function getOrDefault(
+    dict: { [id: string]: any },
+    key: string,
+    dflt: any = undefined,
+    conversion = (x: any) => {
+        return x;
+    }
+) {
+    return key in dict ? conversion(dict[key]) : dflt;
+}
+
+function clinicalData2Dict(clinicalData: ClinicalData[]) {
+    var result: { [id: string]: string } = {};
+    clinicalData.forEach(currentData => {
+        result[currentData.clinicalAttributeId] = currentData.value;
+    });
+    return result;
+}
+
+//export async function fetchSimilarPatientsPage(url: string) {
+//    console.log('### similar patient ### Calling GET: ' + url);
+//    return request
+//        .get(url)
+//        .timeout(120000)
+//        .then(res => {
+//            if (res.ok) {
+//                console.group('### similar patient ### Success GETting ' + url);
+//                console.log(JSON.parse(res.text));
+//                console.groupEnd();
+//                const response = JSON.parse(res.text);
+//                return [] as SimilarPatient[];
+//            } else {
+//                console.group(
+//                    '### similar patient ### ERROR res not ok GETting ' + url
+//                );
+//                console.log(JSON.parse(res.text));
+//                console.groupEnd();
+//
+//                return [] as SimilarPatient[];
+//            }
+//        })
+//        .catch(err => {
+//            console.group('### similar patient ### ERROR catched GETting ' + url);
+//            console.log(err);
+//            console.groupEnd();
+//
+//            return [] as SimilarPatient[];
+//        });
+//}

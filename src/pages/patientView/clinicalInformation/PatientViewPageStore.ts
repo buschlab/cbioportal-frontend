@@ -250,6 +250,7 @@ import {
 import { RecruitingStatus } from 'shared/enums/ClinicalTrialsGovRecruitingStatus';
 import { ageAsNumber } from '../clinicalTrialMatch/utils/AgeSexConverter';
 import { City } from '../clinicalTrialMatch/ClinicalTrialMatchSelectUtil';
+import { SimilarPatient } from 'shared/api/SimilarPatientsAPI';
 
 type PageMode = 'patient' | 'sample';
 type ResourceId = string;
@@ -3498,4 +3499,39 @@ export class PatientViewPageStore {
         default: {},
         onError: () => {},
     });
+
+    ////fetchTest()
+    //readonly getPatients = remoteData({
+    //    invoke: async () => {
+    //        var result: Patient[] = []
+    //        (await fetchPatients()).map((x) => {
+    //            result.push(x.uniquePatientKey)
+    //        });
+    //        return result
+    //    },
+    //    default: []
+    //});
+    //
+    //
+    //readonly similarPatientsPage = remoteData<SimilarPatient[]>({
+    //    await: () => [this.getPatientIds],
+    //    invoke: async () => {
+    //        var result: SimilarPatient[] = [];
+    //
+    //
+    //        console.group('### TEST ###');
+    //        console.log(this.getPatientIds.result)
+    //        console.groupEnd();
+    //
+    //        for (const patientId of this.getPatientIds.result) {
+    //            //fetchClinicalDataForPatient
+    //            result.push({
+    //                id: patientId
+    //            })
+    //        }
+    //
+    //
+    //        return result
+    //    }
+    //})
 }

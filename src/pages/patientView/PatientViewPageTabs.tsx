@@ -27,6 +27,8 @@ import SampleManager from 'pages/patientView/SampleManager';
 import PatientViewPage from 'pages/patientView/PatientViewPage';
 import PatientViewUrlWrapper from 'pages/patientView/PatientViewUrlWrapper';
 import { ClinicalTrialMatchTable } from './clinicalTrialMatch/ClinicalTrialMatchTable';
+//import { PatientSimilarityTable } from './patientSimilarity/patientSimilarityTable'
+import PatientSimilarityTable from './patientSimilarity/patientSimilarityTable';
 import MtbTable from './therapyRecommendation/MtbTable';
 import { CompactVAFPlot } from 'pages/patientView/genomicOverview/CompactVAFPlot';
 import {
@@ -55,6 +57,7 @@ export enum PatientViewPageTabs {
     Mtb = 'mtb',
     FollowUp = 'followUp',
     ClinicalTrialsGov = 'clinicaltrialsGov',
+    PatientSimilarity = 'patientSimilarity',
 }
 
 export const PatientViewResourceTabPrefix = 'openResource_';
@@ -651,14 +654,6 @@ export function tabs(
         );
 
     pageComponent.shouldShowMtbTab &&
-        pageComponent.patientViewPageStore.mutationData.isComplete &&
-        pageComponent.patientViewPageStore.discreteCNAData.isComplete &&
-        (pageComponent.patientViewPageStore.oncoKbData.isComplete ||
-            pageComponent.patientViewPageStore.oncoKbData.isError) &&
-        (pageComponent.patientViewPageStore.mtbs.isComplete ||
-            pageComponent.patientViewPageStore.mtbs.isError) &&
-        (pageComponent.patientViewPageStore.cnaOncoKbData.isComplete ||
-            pageComponent.patientViewPageStore.cnaOncoKbData.isError) &&
         tabs.push(
             <MSKTab
                 key={42}
@@ -727,15 +722,6 @@ export function tabs(
         );
 
     pageComponent.shouldShowFollowUpTab &&
-        pageComponent.patientViewPageStore.mutationData.isComplete &&
-        pageComponent.patientViewPageStore.followUps.isComplete &&
-        pageComponent.patientViewPageStore.discreteCNAData.isComplete &&
-        (pageComponent.patientViewPageStore.oncoKbData.isComplete ||
-            pageComponent.patientViewPageStore.oncoKbData.isError) &&
-        (pageComponent.patientViewPageStore.mtbs.isComplete ||
-            pageComponent.patientViewPageStore.mtbs.isError) &&
-        (pageComponent.patientViewPageStore.cnaOncoKbData.isComplete ||
-            pageComponent.patientViewPageStore.cnaOncoKbData.isError) &&
         tabs.push(
             <MSKTab
                 key={44}
@@ -875,6 +861,21 @@ export function tabs(
             />
         </MSKTab>
     );
+
+    pageComponent.shouldShowPatientSimilarity &&
+        tabs.push(
+            <MSKTab
+                key={70}
+                id={PatientViewPageTabs.PatientSimilarity}
+                linkText="Patient similarity"
+                unmountOnHide={false}
+            >
+                <h1>HELLO WORLD</h1>
+                <PatientSimilarityTable
+                    store={pageComponent.patientViewPageStore}
+                />
+            </MSKTab>
+        );
 
     pageComponent.resourceTabs.component &&
         /* @ts-ignore */
