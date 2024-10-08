@@ -872,6 +872,11 @@ export function tabs(
             >
                 <PatientSimilarityTable
                     store={pageComponent.patientViewPageStore}
+                    similarPatients={
+                        pageComponent.patientViewPageStore.similarPatients
+                            .result
+                    }
+                    sampleManager={sampleManager}
                 />
             </MSKTab>
         );
