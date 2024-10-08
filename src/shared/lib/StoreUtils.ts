@@ -1083,7 +1083,9 @@ export function findMutationMolecularProfile(
     }
 
     const profile = molecularProfilesInStudy.result!.find(
-        (profile: MolecularProfile) => profile.molecularAlterationType === type
+        (profile: MolecularProfile) =>
+            profile.molecularAlterationType === type &&
+            profile.studyId === studyId
     );
 
     return profile;

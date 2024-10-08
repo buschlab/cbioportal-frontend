@@ -344,10 +344,7 @@ export class PatientViewPageInner extends React.Component<
 
     @computed
     public get shouldShowPatientSimilarity(): boolean {
-        return (
-            //this.pageStore.similarPatientsPage.isComplete
-            true
-        );
+        return this.pageStore.similarPatients.isComplete;
     }
 
     @autobind

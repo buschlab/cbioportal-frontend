@@ -13,6 +13,7 @@ import {
     CBioPortalAPI,
     MutationFilter,
     Mutation,
+    MolecularProfile,
 } from 'cbioportal-ts-api-client';
 import {
     concatMutationData,
@@ -67,6 +68,15 @@ import {
     evaluatePutativeDriverInfoWithHotspots,
     evaluatePutativeDriverInfo,
 } from 'shared/lib/StoreUtils';
+import {
+    CLINICAL_ATTRIBUTE_ID_ENUM,
+    MIS_TYPE_VALUE,
+    GENOME_NEXUS_ARG_FIELD_ENUM,
+    TMB_H_THRESHOLD,
+    AlterationTypeConstants,
+    DataTypeConstants,
+} from 'shared/constants';
+import { MobxPromise, stringListToIndexSet } from 'cbioportal-frontend-commons';
 
 export interface SimilarPatient {
     patient_id: string;
@@ -75,6 +85,7 @@ export interface SimilarPatient {
     gender: string;
     name: string;
     cancertype: string;
+    mutationData: Mutation[];
 }
 
 export async function fetchPatientsPage(
@@ -96,11 +107,20 @@ export async function fetchPatientsPage(
         pageNumber: page,
     });
 
-    const totalPages: number = 2;
-
     //console.log(rawPatients)
 
-    rawPatients.forEach(patient => {
+    // GET ALL MOLECULAR PROFILE IDS
+
+    //const currentMolecularProfiles = client.getAllMolecularProfilesInStudyUsingGET({
+    //    studyId: clinicalDataDict.studyId,
+    //});
+    const molecularProfiles: MolecularProfile[] = await client.getAllMolecularProfilesUsingGET(
+        {
+            projection: 'SUMMARY',
+        }
+    );
+
+    rawPatients.forEach(async patient => {
         (async function(patient) {
             // GET CLINICAL DATA
             const currentClinicalData = await client.getAllClinicalDataOfPatientInStudyUsingGET(
@@ -109,28 +129,33 @@ export async function fetchPatientsPage(
                     patientId: patient.patientId,
                 }
             );
-            var clinicalDataDict = clinicalData2Dict(currentClinicalData);
+            const clinicalDataDict = clinicalData2Dict(currentClinicalData);
 
             //console.group('### TEST ###');
             //console.log(clinicalDataDict)
             //console.groupEnd();
 
-            // GET SAMPLES / molecular profile ids
+            // GET SAMPLE IDS / molecular profile ids
+
+            const mutationalProfile = findMolecularProfile(
+                molecularProfiles,
+                patient.studyId,
+                AlterationTypeConstants.MUTATION_EXTENDED
+            );
+
+            const samples = await fetchSamplesForPatient(
+                patient.studyId,
+                patient.patientId
+            );
+            const currentSamples = samples.map(el => el.sampleId);
 
             // GET MUTATIONS
             const mutationFilter = {
-                sampleIds: this.sampleIds,
+                sampleIds: currentSamples,
             } as MutationFilter;
-
-            //const mutationData = await client.fetchMutationsInMolecularProfileUsingPOST({
-            //    molecularProfileId,
-            //    mutationFilter,
-            //    projection: 'DETAILED',
-            //})
-
             const mutationData = await fetchMutationData(
                 mutationFilter,
-                molecularProfileId
+                mutationalProfile?.molecularProfileId
             );
 
             // COLLECT DATA
@@ -141,18 +166,34 @@ export async function fetchPatientsPage(
                 gender: getOrDefault(clinicalDataDict, 'GENDER'),
                 name: getOrDefault(clinicalDataDict, 'PATIENT_DISPLAY_NAME'),
                 cancertype: getOrDefault(clinicalDataDict, 'TEST'),
+                mutationData: [],
             });
         })(patient);
-
-        console.group('### TEST INITIAL PATIENTS ###');
-        console.log(patients);
-        console.groupEnd();
     });
 
-    return { patients: patients, totalPages: totalPages };
+    return patients;
 }
 
-function getOrDefault(
+function findMolecularProfile(
+    molecularProfiles: MolecularProfile[],
+    studyId: string,
+    type: string
+): MolecularProfile | undefined {
+    if (!molecularProfiles) {
+        return undefined;
+    }
+
+    const profile = molecularProfiles.find((profile: MolecularProfile) => {
+        return (
+            profile.molecularAlterationType === type &&
+            profile.studyId === studyId
+        );
+    });
+
+    return profile;
+}
+
+export function getOrDefault(
     dict: { [id: string]: any },
     key: string,
     dflt: any = undefined,
@@ -163,7 +204,7 @@ function getOrDefault(
     return key in dict ? conversion(dict[key]) : dflt;
 }
 
-function clinicalData2Dict(clinicalData: ClinicalData[]) {
+export function clinicalData2Dict(clinicalData: ClinicalData[]) {
     var result: { [id: string]: string } = {};
     clinicalData.forEach(currentData => {
         result[currentData.clinicalAttributeId] = currentData.value;

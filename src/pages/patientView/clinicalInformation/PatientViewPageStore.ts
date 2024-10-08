@@ -250,7 +250,11 @@ import {
 import { RecruitingStatus } from 'shared/enums/ClinicalTrialsGovRecruitingStatus';
 import { ageAsNumber } from '../clinicalTrialMatch/utils/AgeSexConverter';
 import { City } from '../clinicalTrialMatch/ClinicalTrialMatchSelectUtil';
-import { SimilarPatient } from 'shared/api/SimilarPatientsAPI';
+import {
+    SimilarPatient,
+    getOrDefault,
+    clinicalData2Dict,
+} from 'shared/api/SimilarPatientsAPI';
 
 type PageMode = 'patient' | 'sample';
 type ResourceId = string;
@@ -3500,38 +3504,87 @@ export class PatientViewPageStore {
         onError: () => {},
     });
 
-    ////fetchTest()
-    //readonly getPatients = remoteData({
-    //    invoke: async () => {
-    //        var result: Patient[] = []
-    //        (await fetchPatients()).map((x) => {
-    //            result.push(x.uniquePatientKey)
-    //        });
-    //        return result
-    //    },
-    //    default: []
-    //});
-    //
-    //
-    //readonly similarPatientsPage = remoteData<SimilarPatient[]>({
-    //    await: () => [this.getPatientIds],
-    //    invoke: async () => {
-    //        var result: SimilarPatient[] = [];
-    //
-    //
-    //        console.group('### TEST ###');
-    //        console.log(this.getPatientIds.result)
-    //        console.groupEnd();
-    //
-    //        for (const patientId of this.getPatientIds.result) {
-    //            //fetchClinicalDataForPatient
-    //            result.push({
-    //                id: patientId
-    //            })
-    //        }
-    //
-    //
-    //        return result
-    //    }
-    //})
+    readonly allPatients = remoteData({
+        invoke: async () => {
+            return await client.getAllPatientsUsingGET({
+                projection: 'SUMMARY',
+            });
+        },
+        default: [],
+    });
+
+    readonly allMolecularProfiles = remoteData({
+        invoke: async () => {
+            return await client.getAllMolecularProfilesUsingGET({
+                projection: 'SUMMARY',
+            });
+        },
+        default: [],
+    });
+
+    readonly similarPatients = remoteData<SimilarPatient[]>({
+        await: () => [this.allPatients, this.allMolecularProfiles],
+        invoke: async () => {
+            var result: SimilarPatient[] = [];
+
+            for (const patient of this.allPatients.result) {
+                if (patient.patientId == this.patientId) {
+                    continue;
+                }
+                // GET CLINICAL DATA
+                const currentClinicalData = await client.getAllClinicalDataOfPatientInStudyUsingGET(
+                    {
+                        studyId: patient.studyId,
+                        patientId: patient.patientId,
+                    }
+                );
+                const clinicalDataDict = clinicalData2Dict(currentClinicalData);
+
+                // GET VARIANTS
+                const mutationalProfile = findMutationMolecularProfile(
+                    this.allMolecularProfiles,
+                    patient.studyId,
+                    AlterationTypeConstants.MUTATION_EXTENDED
+                );
+                const currentSampleIds = await (
+                    await fetchSamplesForPatient(
+                        patient.studyId,
+                        patient.patientId
+                    )
+                ).map(el => el.sampleId);
+                const mutationFilter = {
+                    sampleIds: currentSampleIds,
+                } as MutationFilter;
+                const mutationData = await fetchMutationData(
+                    mutationFilter,
+                    mutationalProfile?.molecularProfileId
+                );
+
+                result.push({
+                    patient_id: patient.patientId,
+                    study_id: patient.studyId,
+                    age: getOrDefault(
+                        clinicalDataDict,
+                        'AGE',
+                        undefined,
+                        Number
+                    ),
+                    gender: getOrDefault(clinicalDataDict, 'GENDER'),
+                    name: getOrDefault(
+                        clinicalDataDict,
+                        'PATIENT_DISPLAY_NAME'
+                    ),
+                    cancertype: getOrDefault(clinicalDataDict, 'TEST'),
+                    mutationData: mutationData,
+                });
+            }
+
+            console.group('### TEST INITIAL PATIENTS ###');
+            console.log(result);
+            console.groupEnd();
+
+            return result;
+        },
+        default: [],
+    });
 }
