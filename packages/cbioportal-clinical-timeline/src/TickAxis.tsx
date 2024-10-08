@@ -79,6 +79,8 @@ const TickAxis: React.FunctionComponent<ITickAxisProps> = observer(function({
                         startPoint = tick.start;
                     }
 
+                    var startDate = new Date('01/01/1960');
+
                     const majorTickPosition = store.getPosition({
                         start: startPoint,
                     });
@@ -98,17 +100,12 @@ const TickAxis: React.FunctionComponent<ITickAxisProps> = observer(function({
 
                         let majorLabel: string = '';
 
-                        if (count < 0) {
-                            majorLabel = `${count}${unit}`;
-                        }
-
-                        if (count === 0) {
-                            majorLabel = '0';
-                        }
-
-                        if (count > 0) {
-                            majorLabel = `${count}${unit}`;
-                        }
+                        startDate.setMonth(startDate.getMonth() + count);
+                        majorLabel =
+                            startDate.getMonth() +
+                            1 +
+                            '/' +
+                            startDate.getFullYear();
 
                         content = (
                             <>
@@ -165,13 +162,29 @@ const TickAxis: React.FunctionComponent<ITickAxisProps> = observer(function({
                                                 : `${count + 1}${unit}`;
                                         minorLabel =
                                             count === -1
-                                                ? `-${minorCount}m`
-                                                : `${majorLabel} ${minorCount}m`;
+                                                ? startDate.getMonth() +
+                                                  minorCount +
+                                                  1 +
+                                                  '/' +
+                                                  startDate.getFullYear()
+                                                : startDate.getMonth() +
+                                                  minorCount +
+                                                  1 +
+                                                  '/' +
+                                                  startDate.getFullYear();
                                     } else {
                                         minorLabel =
                                             count === 0
-                                                ? `${minorCount}m`
-                                                : `${majorLabel} ${minorCount}m`;
+                                                ? startDate.getMonth() +
+                                                  minorCount +
+                                                  1 +
+                                                  '/' +
+                                                  startDate.getFullYear()
+                                                : startDate.getMonth() +
+                                                  minorCount +
+                                                  1 +
+                                                  '/' +
+                                                  startDate.getFullYear();
                                     }
                                 }
 

@@ -281,6 +281,7 @@ const Timeline: React.FunctionComponent<ITimelineProps> = observer(function({
 }: ITimelineProps) {
     const tracks = store.data;
     const SCROLLBAR_PADDING = 15;
+    var dateType = false;
     let height =
         TICK_AXIS_HEIGHT +
         _.sumBy(tracks, t => {
@@ -354,6 +355,17 @@ const Timeline: React.FunctionComponent<ITimelineProps> = observer(function({
             className={'tl-timeline-wrapper'}
             id={store.uniqueId}
         >
+            <div className={'tl-timeline-zoom-info'}>
+                <button
+                    className={'btn btn-xs'}
+                    onClick={() => {
+                        dateType = !dateType;
+                        console.log(dateType);
+                    }}
+                >
+                    <i className={'fa fa-search-minus'} /> toggle date type
+                </button>
+            </div>
             <div className={'tl-timeline-reset-buttons'}>
                 <div className={'tl-timeline-zoom-info'}>
                     {store.zoomBounds && (

@@ -201,6 +201,9 @@ export function sortNestedTracks(tracks: TimelineTrackSpecification[]) {
 }
 
 export function formatDate(dayCount: number) {
+    var startDate = new Date('01/01/1960');
+    startDate.setDate(startDate.getDate() + dayCount);
+
     let negative = dayCount < 0;
     dayCount = Math.abs(dayCount);
 
@@ -218,7 +221,13 @@ export function formatDate(dayCount: number) {
         arr.push(`${days} day${days === 1 ? '' : 's'}`);
 
     const formattedDate = arr.join(', ');
-    return `${negative ? '-' : ''}${formattedDate}`;
+    return (
+        startDate.getDate() +
+        '/' +
+        (startDate.getMonth() + 1) +
+        '/' +
+        startDate.getFullYear()
+    );
 }
 
 function getAllDescendantData(
