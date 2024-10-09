@@ -2,7 +2,7 @@ import React from 'react';
 import { ITherapyRecommendation, IGeneticAlteration } from 'cbioportal-utils';
 import { Mutation, DiscreteCopyNumberData } from 'cbioportal-ts-api-client';
 import Select from 'react-select';
-import _ from 'lodash';
+import _, { isUndefined } from 'lodash';
 import { flattenArray } from '../therapyRecommendation/TherapyRecommendationTableUtils';
 import AlleleFreqColumnFormatter from '../mutation/column/AlleleFreqColumnFormatter';
 import { VariantAnnotation, MyVariantInfo } from 'genome-nexus-ts-api-client';
@@ -10,6 +10,8 @@ import SampleManager from 'pages/patientView/SampleManager';
 import { If, Then } from 'react-if';
 import { components } from 'react-select';
 import styles from '../therapyRecommendation/style/therapyRecommendation.module.scss';
+import CreatableSelect from 'react-select';
+import { useState } from 'react';
 
 interface MutationSelectProps {
     data: Mutation[];
@@ -27,45 +29,24 @@ interface MutationSelectProps {
 
 type MyOption = { label: string; value: IGeneticAlteration };
 
-export class MutationSelect extends React.Component<MutationSelectProps, {}> {
-    public render() {
-        const Option = (props: any) => {
-            return (
-                <div>
-                    <components.Option {...props}>
-                        <span style={{ marginRight: 5 }}>{props.label}</span>
-                        <If
-                            condition={
-                                typeof props.value === 'object' &&
-                                props.value !== null &&
-                                'sampleIds' in props.value &&
-                                props.value.sampleIds
-                            }
-                        >
-                            <Then>
-                                <span>
-                                    {props.value.sampleIds.map(
-                                        (sampleId: string) => (
-                                            <span
-                                                className={styles.genomicSpan}
-                                            >
-                                                {this.props.sampleManager!.getComponentForSample(
-                                                    sampleId,
-                                                    1,
-                                                    ''
-                                                )}
-                                            </span>
-                                        )
-                                    )}
-                                </span>
-                            </Then>
-                        </If>
-                    </components.Option>
-                </div>
-            );
-        };
+type MutationSelectState = {
+    selectedOptions: MyOption[];
+};
 
-        let allAlterations = this.props.mutations.map((mutation: Mutation) => {
+export class MutationSelect extends React.Component<
+    MutationSelectProps,
+    MutationSelectState,
+    {}
+> {
+    constructor(props: MutationSelectProps) {
+        super(props);
+        this.state = {
+            selectedOptions: new Array<MyOption>(),
+        };
+    }
+
+    private get allMutations() {
+        return this.props.mutations.map((mutation: Mutation) => {
             const index =
                 mutation.chr +
                 ',' +
@@ -127,8 +108,10 @@ export class MutationSelect extends React.Component<MutationSelectProps, {}> {
                 sampleIds: [mutation.sampleId],
             } as IGeneticAlteration;
         });
+    }
 
-        let allCna = this.props.cna.map((alt: DiscreteCopyNumberData) => {
+    private get allCNA() {
+        return this.props.cna.map((alt: DiscreteCopyNumberData) => {
             return {
                 hugoSymbol: alt.gene.hugoGeneSymbol,
                 alteration:
@@ -137,11 +120,17 @@ export class MutationSelect extends React.Component<MutationSelectProps, {}> {
                 sampleIds: [alt.sampleId],
             } as IGeneticAlteration;
         });
+    }
 
-        allAlterations.push(...allCna);
+    private get allAlterations() {
+        // collect all alterations in IGeneticAlteration objects
+        let collectedAlterations: IGeneticAlteration[] = [];
+        collectedAlterations.push(...this.allMutations);
+        collectedAlterations.push(...this.allCNA);
 
+        // remove duplicates (esp. from differnet samples) but safe samples
         let foundIdx = -1;
-        var groupedAlterations = allAlterations.reduce(
+        var groupedAlterations = collectedAlterations.reduce(
             (
                 accu: IGeneticAlteration[],
                 curr: IGeneticAlteration,
@@ -169,27 +158,83 @@ export class MutationSelect extends React.Component<MutationSelectProps, {}> {
             []
         );
 
-        let groupedSortedAlterations = groupedAlterations.map(alt => ({
-            ...alt,
-            sampleIds: this.props
-                .sampleManager!.getSampleIdsInOrder()
-                .filter(item => alt.sampleIds!.includes(item)),
-        }));
-
-        let alterationOptions = groupedSortedAlterations.map(
-            (alteration: IGeneticAlteration) => ({
-                value: alteration,
-                label: alteration.hugoSymbol + ' ' + alteration.alteration,
+        let groupedSortedAlterations = groupedAlterations.map(
+            (alt: IGeneticAlteration) => ({
+                ...alt,
+                sampleIds: this.props
+                    .sampleManager!.getSampleIdsInOrder()
+                    .filter(item => alt.sampleIds!.includes(item)),
             })
         );
 
+        return groupedSortedAlterations;
+    }
+
+    private readonly alterationOptions = this.allAlterations.map(
+        (alteration: IGeneticAlteration) => ({
+            value: alteration,
+            label: alteration.hugoSymbol + ' ' + alteration.alteration,
+        })
+    );
+
+    public render() {
+        const Option = (props: any) => {
+            return (
+                <div
+                    key={
+                        props.data.value.hugoSymbol +
+                        ':' +
+                        props.data.value.alteration
+                    }
+                >
+                    <components.Option {...props}>
+                        <span style={{ marginRight: 5 }}>{props.label}</span>
+                        <If
+                            condition={
+                                typeof props.value === 'object' &&
+                                props.value !== null &&
+                                'sampleIds' in props.value &&
+                                props.value.sampleIds != null
+                            }
+                        >
+                            <Then>
+                                <span>
+                                    {props.value.sampleIds.map(
+                                        (sampleId: string) => (
+                                            <span
+                                                key={
+                                                    sampleId +
+                                                    ':' +
+                                                    props.data.value
+                                                        .hugoSymbol +
+                                                    ':' +
+                                                    props.data.value.alteration
+                                                }
+                                                className={styles.genomicSpan}
+                                            >
+                                                {this.props.sampleManager!.getComponentForSample(
+                                                    sampleId,
+                                                    1,
+                                                    ''
+                                                )}
+                                            </span>
+                                        )
+                                    )}
+                                </span>
+                            </Then>
+                        </If>
+                    </components.Option>
+                </div>
+            );
+        };
+
         return (
             <Select
-                options={alterationOptions}
+                options={this.alterationOptions}
                 components={{ Option }}
                 isMulti
                 defaultValue={[]}
-                name="positiveAlterationsSelect"
+                name="patientSimilarityAlterationSelect"
                 className="basic-multi-select"
                 classNamePrefix="select"
                 onChange={(selectedOption: MyOption[]) => {
@@ -197,10 +242,14 @@ export class MutationSelect extends React.Component<MutationSelectProps, {}> {
                         this.props.onChange(
                             selectedOption.map(option => option.value)
                         );
+                        this.setState({
+                            selectedOptions: selectedOption,
+                        });
                     } else if (selectedOption === null) {
                         this.props.onChange([] as IGeneticAlteration[]);
                     }
                 }}
+                value={this.state.selectedOptions}
             />
         );
     }
@@ -233,7 +282,7 @@ export class MutationSelect extends React.Component<MutationSelectProps, {}> {
 //    placeholder?: string;
 //}
 //
-//export const MutationSelect = (
+//export const MutationSelect2 = (
 //    props: MutationSelectProps
 //) => {
 //    let mutationOptions: Array<object> = [];
@@ -340,4 +389,5 @@ export class MutationSelect extends React.Component<MutationSelectProps, {}> {
 //};
 //
 //export default MutationSelect;
+//
 //

@@ -142,6 +142,7 @@ export class PatientSimilarityTable extends React.Component<
 
         if (this.state.selectedMutations.length > 0) {
             for (const similarPatient of this.props.similarPatients) {
+                var addPatient = true;
                 for (const alteration of this.state.selectedMutations) {
                     const foundMutation = similarPatient.mutationData.find(
                         (currentAlteration: Mutation) => {
@@ -159,10 +160,14 @@ export class PatientSimilarityTable extends React.Component<
                             }
                         }
                     );
-                    if (foundMutation) {
-                        newSimilarPatients.push(similarPatient);
+                    if (!foundMutation) {
+                        addPatient = false;
                         break;
                     }
+                }
+
+                if (addPatient) {
+                    newSimilarPatients.push(similarPatient);
                 }
             }
 
