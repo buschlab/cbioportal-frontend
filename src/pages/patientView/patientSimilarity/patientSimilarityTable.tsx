@@ -9,10 +9,7 @@ import LoadingIndicator from 'shared/components/loadingIndicator/LoadingIndicato
 import { DefaultTooltip } from 'cbioportal-frontend-commons';
 import { Button } from 'react-bootstrap';
 import { IClinicalTrial } from 'cbioportal-utils';
-import {
-    SimilarPatient,
-    fetchPatientsPage,
-} from 'shared/api/SimilarPatientsAPI';
+import { SimilarPatient } from 'shared/api/SimilarPatientsAPI';
 import { getServerConfig } from 'config/config';
 import { MutationSelect } from './MutationSelect';
 
@@ -28,6 +25,7 @@ import {
 import { ITherapyRecommendation, IGeneticAlteration } from 'cbioportal-utils';
 import SampleManager from 'pages/patientView/SampleManager';
 import { forIn } from 'lodash';
+import { getPatientViewUrl, getSampleViewUrl } from 'shared/api/urls';
 
 enum ColumnKey {
     //patient_id: string;
@@ -73,7 +71,17 @@ export class PatientSimilarityTable extends React.Component<
         },
         {
             name: ColumnKey.NAME,
-            render: (patient: SimilarPatient) => <div>{patient.name}</div>,
+            render: (patient: SimilarPatient) => (
+                <a
+                    href={getPatientViewUrl(
+                        patient.study_id,
+                        patient.patient_id
+                    )}
+                    target="_blank"
+                >
+                    {patient.name}
+                </a>
+            ),
             width: 250,
             resizable: true,
         },
@@ -215,6 +223,7 @@ export class PatientSimilarityTable extends React.Component<
                             onClick={() => {
                                 this.startSearch();
                             }}
+                            className={'btn btn-default'}
                         >
                             Search
                         </button>

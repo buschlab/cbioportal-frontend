@@ -3574,13 +3574,24 @@ export class PatientViewPageStore {
                         clinicalDataDict,
                         'PATIENT_DISPLAY_NAME'
                     ),
-                    cancertype: getOrDefault(clinicalDataDict, 'TEST'),
+                    cancertype: tumorTypeResolver(
+                        getSampleTumorTypeMap(
+                            this.clinicalDataForSamples.result,
+                            this.studyMetaData.result?.cancerType.name
+                        )
+                    ),
                     mutationData: mutationData,
                 });
             }
 
             console.group('### TEST INITIAL PATIENTS ###');
             console.log(result);
+            console.log(
+                getSampleTumorTypeMap(
+                    this.clinicalDataForSamples.result,
+                    this.studyMetaData.result?.cancerType.name
+                )
+            );
             console.groupEnd();
 
             return result;

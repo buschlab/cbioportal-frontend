@@ -84,95 +84,95 @@ export interface SimilarPatient {
     age: number;
     gender: string;
     name: string;
-    cancertype: string;
+    cancertype: string | undefined;
     mutationData: Mutation[];
 }
 
-export async function fetchPatientsPage(
-    page: number = 0,
-    pageSize: number = 10,
-    client: CBioPortalAPI = defaultClient
-) {
-    //'keyword'?: string;
-    //'projection'?: "ID" | "SUMMARY" | "DETAILED" | "META";
-    //'pageSize'?: number;
-    //'pageNumber'?: number;
-    //'direction'?: "ASC" | "DESC";
-    //$queryParameters?: any;
-    var patients: SimilarPatient[] = [];
-
-    const rawPatients = await client.getAllPatientsUsingGET({
-        projection: 'SUMMARY',
-        pageSize: pageSize,
-        pageNumber: page,
-    });
-
-    //console.log(rawPatients)
-
-    // GET ALL MOLECULAR PROFILE IDS
-
-    //const currentMolecularProfiles = client.getAllMolecularProfilesInStudyUsingGET({
-    //    studyId: clinicalDataDict.studyId,
-    //});
-    const molecularProfiles: MolecularProfile[] = await client.getAllMolecularProfilesUsingGET(
-        {
-            projection: 'SUMMARY',
-        }
-    );
-
-    rawPatients.forEach(async patient => {
-        (async function(patient) {
-            // GET CLINICAL DATA
-            const currentClinicalData = await client.getAllClinicalDataOfPatientInStudyUsingGET(
-                {
-                    studyId: patient.studyId,
-                    patientId: patient.patientId,
-                }
-            );
-            const clinicalDataDict = clinicalData2Dict(currentClinicalData);
-
-            //console.group('### TEST ###');
-            //console.log(clinicalDataDict)
-            //console.groupEnd();
-
-            // GET SAMPLE IDS / molecular profile ids
-
-            const mutationalProfile = findMolecularProfile(
-                molecularProfiles,
-                patient.studyId,
-                AlterationTypeConstants.MUTATION_EXTENDED
-            );
-
-            const samples = await fetchSamplesForPatient(
-                patient.studyId,
-                patient.patientId
-            );
-            const currentSamples = samples.map(el => el.sampleId);
-
-            // GET MUTATIONS
-            const mutationFilter = {
-                sampleIds: currentSamples,
-            } as MutationFilter;
-            const mutationData = await fetchMutationData(
-                mutationFilter,
-                mutationalProfile?.molecularProfileId
-            );
-
-            // COLLECT DATA
-            patients.push({
-                patient_id: patient.patientId,
-                study_id: patient.studyId,
-                age: getOrDefault(clinicalDataDict, 'AGE', undefined, Number),
-                gender: getOrDefault(clinicalDataDict, 'GENDER'),
-                name: getOrDefault(clinicalDataDict, 'PATIENT_DISPLAY_NAME'),
-                cancertype: getOrDefault(clinicalDataDict, 'TEST'),
-                mutationData: [],
-            });
-        })(patient);
-    });
-
-    return patients;
-}
+//export async function fetchPatientsPage(
+//    page: number = 0,
+//    pageSize: number = 10,
+//    client: CBioPortalAPI = defaultClient
+//) {
+//    //'keyword'?: string;
+//    //'projection'?: "ID" | "SUMMARY" | "DETAILED" | "META";
+//    //'pageSize'?: number;
+//    //'pageNumber'?: number;
+//    //'direction'?: "ASC" | "DESC";
+//    //$queryParameters?: any;
+//    var patients: SimilarPatient[] = [];
+//
+//    const rawPatients = await client.getAllPatientsUsingGET({
+//        projection: 'SUMMARY',
+//        pageSize: pageSize,
+//        pageNumber: page,
+//    });
+//
+//    //console.log(rawPatients)
+//
+//    // GET ALL MOLECULAR PROFILE IDS
+//
+//    //const currentMolecularProfiles = client.getAllMolecularProfilesInStudyUsingGET({
+//    //    studyId: clinicalDataDict.studyId,
+//    //});
+//    const molecularProfiles: MolecularProfile[] = await client.getAllMolecularProfilesUsingGET(
+//        {
+//            projection: 'SUMMARY',
+//        }
+//    );
+//
+//    rawPatients.forEach(async patient => {
+//        (async function(patient) {
+//            // GET CLINICAL DATA
+//            const currentClinicalData = await client.getAllClinicalDataOfPatientInStudyUsingGET(
+//                {
+//                    studyId: patient.studyId,
+//                    patientId: patient.patientId,
+//                }
+//            );
+//            const clinicalDataDict = clinicalData2Dict(currentClinicalData);
+//
+//            //console.group('### TEST ###');
+//            //console.log(clinicalDataDict)
+//            //console.groupEnd();
+//
+//            // GET SAMPLE IDS / molecular profile ids
+//
+//            const mutationalProfile = findMolecularProfile(
+//                molecularProfiles,
+//                patient.studyId,
+//                AlterationTypeConstants.MUTATION_EXTENDED
+//            );
+//
+//            const samples = await fetchSamplesForPatient(
+//                patient.studyId,
+//                patient.patientId
+//            );
+//            const currentSamples = samples.map(el => el.sampleId);
+//
+//            // GET MUTATIONS
+//            const mutationFilter = {
+//                sampleIds: currentSamples,
+//            } as MutationFilter;
+//            const mutationData = await fetchMutationData(
+//                mutationFilter,
+//                mutationalProfile?.molecularProfileId
+//            );
+//
+//            // COLLECT DATA
+//            patients.push({
+//                patient_id: patient.patientId,
+//                study_id: patient.studyId,
+//                age: getOrDefault(clinicalDataDict, 'AGE', undefined, Number),
+//                gender: getOrDefault(clinicalDataDict, 'GENDER'),
+//                name: getOrDefault(clinicalDataDict, 'PATIENT_DISPLAY_NAME'),
+//                cancertype: getOrDefault(clinicalDataDict, 'TEST'),
+//                mutationData: [],
+//            });
+//        })(patient);
+//    });
+//
+//    return patients;
+//}
 
 function findMolecularProfile(
     molecularProfiles: MolecularProfile[],
