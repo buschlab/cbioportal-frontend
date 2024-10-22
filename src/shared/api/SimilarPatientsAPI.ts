@@ -86,6 +86,25 @@ export interface SimilarPatient {
     name: string;
     cancertype: string | undefined;
     mutationData: Mutation[];
+    sampleIds: string[];
+}
+
+export interface TaggedMutation extends Mutation {
+    comparedMutations: Mutation[];
+    similarityTag: 'equal' | 'phgvs' | 'pathway' | 'gene' | 'unequal';
+}
+
+export class SimilarMutation {
+    mutations1: Mutation[];
+    mutations2: Mutation[];
+    similarityTag: 'equal' | 'phgvs' | 'pathway' | 'gene' | 'unequal';
+
+    //get StringRepr() {
+    //    const genomicMut1 = [this.mutation1.chr, this.mutation1.startPosition, this.mutation1.referenceAllele, this.mutation1.variantAllele].join('-')
+    //    const phgvsMut1 = [this.mutation1.gene, this.mutation1.proteinChange].join(':')
+    //    const genomicMut2 = [this.mutation2.chr, this.mutation2.startPosition, this.mutation2.referenceAllele, this.mutation2.variantAllele].join('-')
+    //    const phgvsMut2 = [this.mutation2.gene, this.mutation2.proteinChange].join(':')
+    //}
 }
 
 //export async function fetchPatientsPage(

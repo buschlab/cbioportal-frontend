@@ -43,6 +43,7 @@ import {
 import { ILazyMobXTableApplicationLazyDownloadDataFetcher } from '../../lib/ILazyMobXTableApplicationLazyDownloadDataFetcher';
 import { maxPage } from './utils';
 import { inputBoxChangeTimeoutEvent } from '../../lib/EventUtils';
+import _ from 'lodash';
 
 export type SortDirection = 'asc' | 'desc';
 
@@ -74,9 +75,12 @@ export type Column<T> = {
     togglable?: boolean;
     resizable?: boolean;
     truncateOnResize?: boolean;
+
+    order?: number;
+    shouldExclude?: () => boolean;
 };
 
-type LazyMobXTableProps<T> = {
+export type LazyMobXTableProps<T> = {
     className?: string;
     columns: Column<T>[];
     data?: T[];
@@ -120,6 +124,7 @@ type LazyMobXTableProps<T> = {
     ) => JSX.Element | undefined;
     deactivateColumnFilter?: (columnId: string) => void;
     customControls?: JSX.Element;
+    rowColorFunc?: (d: T) => string;
 };
 
 function compareValues<U extends number | string>(
@@ -283,6 +288,7 @@ export class LazyMobXTableStore<T> {
     @observable private onRowClick: ((d: T) => void) | undefined;
     @observable private onRowMouseEnter: ((d: T) => void) | undefined;
     @observable private onRowMouseLeave: ((d: T) => void) | undefined;
+    @observable private rowColorFunc: ((d: T) => string) | undefined;
 
     // this observable is intended to always refer to props.columnToHeaderFilterIconModal
     @observable private _columnToHeaderFilterIconModal:
@@ -572,7 +578,35 @@ export class LazyMobXTableStore<T> {
     }
 
     @computed get visibleColumns(): Column<T>[] {
-        return this.columns.filter(column => this.isVisible(column));
+        return this.orderedColumns.filter(column => this.isVisible(column));
+    }
+
+    @computed
+    protected get orderedColumns(): Column<T>[] {
+        const columns = this.filteredColumns || [];
+        return _.sortBy(columns, c => {
+            let order: number = -1;
+
+            if (c && c.order) {
+                order = c.order as number;
+            }
+
+            return order;
+        });
+    }
+
+    @computed protected get filteredColumns(): Column<T>[] {
+        const columns = this.columns || [];
+        return columns.reduce((columns: Column<T>[], next: Column<T>) => {
+            if (
+                next && // actual column definition may be missing for a specific enum
+                (!next.shouldExclude || !next.shouldExclude())
+            ) {
+                columns.push(next);
+            }
+
+            return columns;
+        }, []);
     }
 
     @computed get colVisProp(): IColumnVisibilityDef[] {
@@ -691,6 +725,10 @@ export class LazyMobXTableStore<T> {
                     onRowMouseLeave!(this.visibleData[i]);
                 };
             }
+            if (this.rowColorFunc) {
+                const rowColorFunc = this.rowColorFunc;
+                classNames.push(rowColorFunc(this.visibleData[i]));
+            }
             if (classNames.length) {
                 rowProps.className = classNames.join(' ');
             }
@@ -765,6 +803,7 @@ export class LazyMobXTableStore<T> {
         this.onRowClick = props.onRowClick;
         this.onRowMouseEnter = props.onRowMouseEnter;
         this.onRowMouseLeave = props.onRowMouseLeave;
+        this.rowColorFunc = props.rowColorFunc;
 
         if (props.dataStore) {
             this.dataStore = props.dataStore;

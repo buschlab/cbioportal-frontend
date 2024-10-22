@@ -4,14 +4,26 @@ import { PatientViewPageStore } from '../clinicalInformation/PatientViewPageStor
 import { observer } from 'mobx-react';
 import { Link } from 'react-router-dom';
 import { Collapse } from 'react-bootstrap';
-import LazyMobXTable from '../../../shared/components/lazyMobXTable/LazyMobXTable';
+import LazyMobXTable from 'shared/components/lazyMobXTable/LazyMobXTable';
 import LoadingIndicator from 'shared/components/loadingIndicator/LoadingIndicator';
 import { DefaultTooltip } from 'cbioportal-frontend-commons';
 import { Button } from 'react-bootstrap';
 import { IClinicalTrial } from 'cbioportal-utils';
-import { SimilarPatient } from 'shared/api/SimilarPatientsAPI';
+import {
+    SimilarPatient,
+    TaggedMutation,
+    SimilarMutation,
+} from 'shared/api/SimilarPatientsAPI';
 import { getServerConfig } from 'config/config';
 import { MutationSelect } from './MutationSelect';
+import {
+    PatientSimilarityMutationTable,
+    SimilarMutationColumnType,
+} from './newPatientSimilarityMutationTable';
+import {
+    getSimilarMutations,
+    filterSimilarMutations,
+} from './patientSimilarityUtils';
 
 import { remoteData } from 'cbioportal-frontend-commons';
 import { sleep } from 'shared/lib/TimeUtils';
@@ -24,8 +36,10 @@ import {
 } from 'cbioportal-ts-api-client';
 import { ITherapyRecommendation, IGeneticAlteration } from 'cbioportal-utils';
 import SampleManager from 'pages/patientView/SampleManager';
-import { forIn } from 'lodash';
 import { getPatientViewUrl, getSampleViewUrl } from 'shared/api/urls';
+import { mergeMutations } from 'shared/lib/StoreUtils';
+import { MutationTableColumnType } from 'shared/components/mutationTable/MutationTable';
+import styles from './styles.module.scss';
 
 enum ColumnKey {
     //patient_id: string;
@@ -51,6 +65,8 @@ interface PatientSimilarityProps {
 export type PatientSimilarityTableState = {
     selectedMutations: IGeneticAlteration[];
     currentSimilarPatients: SimilarPatient[];
+    selectedSimilarPatient: SimilarPatient | undefined;
+    similarMutations: SimilarMutation[];
 };
 
 class SimilarPatientTableComponent extends LazyMobXTable<SimilarPatient> {}
@@ -65,7 +81,15 @@ export class PatientSimilarityTable extends React.Component<
     private readonly _columns = [
         {
             name: ColumnKey.STUDY,
-            render: (patient: SimilarPatient) => <div>{patient.study_id}</div>,
+            render: (patient: SimilarPatient, i: any) => (
+                <div
+                    onClick={() => {
+                        this.selectPatient(i);
+                    }}
+                >
+                    {patient.study_id}
+                </div>
+            ),
             width: 250,
             resizable: true,
         },
@@ -109,21 +133,21 @@ export class PatientSimilarityTable extends React.Component<
             name: ColumnKey.COMMONVARIANTS,
             render: (patient: SimilarPatient) => (
                 <div>
-                    {patient.mutationData.map(mutation => {
-                        for (const referenceMutation of this.props.store
-                            .mutationData.result) {
-                            if (
-                                referenceMutation.chr === mutation.chr &&
-                                referenceMutation.startPosition ===
-                                    mutation.startPosition &&
-                                referenceMutation.referenceAllele ===
-                                    mutation.referenceAllele &&
-                                referenceMutation.variantAllele ===
-                                    mutation.variantAllele
-                            ) {
-                                return <div>{mutation.keyword}</div>;
-                            }
-                        }
+                    {filterSimilarMutations(
+                        getSimilarMutations(
+                            this.props.store.mergedMutationData,
+                            mergeMutations(patient.mutationData)
+                        ),
+                        ['equal', 'phgvs']
+                    ).map((mutation: SimilarMutation) => {
+                        return (
+                            <div>
+                                {[
+                                    mutation.mutations1[0].gene.hugoGeneSymbol,
+                                    mutation.mutations1[0].proteinChange,
+                                ].join(' ')}
+                            </div>
+                        );
                     })}
                 </div>
             ),
@@ -135,16 +159,15 @@ export class PatientSimilarityTable extends React.Component<
     constructor(props: PatientSimilarityProps) {
         super(props);
         this.state = {
-            selectedMutations: new Array<IGeneticAlteration>(),
+            selectedSimilarPatient: undefined,
+            similarMutations: [], // used for mutation table
+            selectedMutations: new Array<IGeneticAlteration>(), // used for search
             currentSimilarPatients: this.props.similarPatients,
         };
+        this.selectPatient(0);
     }
 
     startSearch() {
-        console.group('### start similarity search ###');
-        console.log(this.state);
-        console.groupEnd();
-
         var newSimilarPatients: SimilarPatient[] = [];
         var didFilter: boolean = false;
 
@@ -188,6 +211,47 @@ export class PatientSimilarityTable extends React.Component<
         this.setState({
             currentSimilarPatients: newSimilarPatients,
         });
+    }
+
+    selectPatient(i: number) {
+        // i == position of similar patient in currentSimilarPatients state
+
+        const selectedSimilarPatient = this.state.currentSimilarPatients[i];
+        const mergedSimilarMutations = mergeMutations(
+            selectedSimilarPatient.mutationData
+        );
+        const similarMutations = getSimilarMutations(
+            this.props.store.mergedMutationData,
+            mergedSimilarMutations
+        );
+        const filteredSimilarMutations = filterSimilarMutations(
+            similarMutations,
+            ['equal', 'phgvs', 'pathway', 'gene']
+        );
+
+        console.group('### TEST RELOAD PATIENTS ###');
+        console.log(mergedSimilarMutations);
+        console.groupEnd();
+
+        this.setState({
+            selectedSimilarPatient: selectedSimilarPatient,
+            similarMutations: filteredSimilarMutations,
+        });
+    }
+
+    private getVisibleColumns(): { [columnId: string]: boolean } {
+        let result = {} as { [columnId: string]: boolean };
+
+        const visibleColumns = [] as SimilarMutationColumnType[];
+        for (const colId of visibleColumns) {
+            result[colId] = true;
+        }
+
+        const invisibleColumns = [] as SimilarMutationColumnType[];
+        for (const colId of invisibleColumns) {
+            result[colId] = false;
+        }
+        return result;
     }
 
     render() {
@@ -235,6 +299,65 @@ export class PatientSimilarityTable extends React.Component<
                         data={this.state.currentSimilarPatients} //
                         columns={this._columns}
                         initialItemsPerPage={this.ENTRIES_PER_PAGE}
+                    />
+                </div>
+                <div>
+                    <PatientSimilarityMutationTable
+                        //data={this.props.store.mergedMutationData} //{this.props.store.mergedMutationData} mergeMutations(this.state.selectedSimilarPatient.mutationData)
+                        data={this.state.similarMutations}
+                        // reference mutations
+                        sampleManager1={this.props.sampleManager}
+                        sampleToGenePanelId1={
+                            this.props.store.sampleToMutationGenePanelId.result
+                        }
+                        genePanelIdToEntrezGeneIds1={
+                            this.props.store.genePanelIdToEntrezGeneIds.result
+                        }
+                        sampleIds1={this.props.store.sampleIds}
+                        // comparison mutations
+                        sampleManager2={this.props.sampleManager}
+                        sampleToGenePanelId2={
+                            this.props.store.sampleToMutationGenePanelId.result
+                        }
+                        genePanelIdToEntrezGeneIds2={
+                            this.props.store.genePanelIdToEntrezGeneIds.result
+                        }
+                        sampleIds2={this.props.store.sampleIds}
+                        // misc
+                        //usingPublicOncoKbInstance={false}
+                        //generateGenomeNexusHgvsgUrl={this.props.store.generateGenomeNexusHgvsgUrl}
+                        columnVisibility={this.getVisibleColumns()}
+                        rowColorFunc={(d: SimilarMutation) => {
+                            switch (d.similarityTag) {
+                                case 'equal':
+                                    return styles.bg_comparisonEqual;
+                                case 'gene':
+                                    return styles.bg_comparisonGene;
+                                case 'pathway':
+                                    return styles.bg_comparisonPathway;
+                                case 'phgvs':
+                                    return styles.bg_comparisonPhgvs;
+                                default:
+                                    return styles.bg_comparisonUnequal;
+                            }
+                        }}
+
+                        //customDriverName={
+                        //    getServerConfig()
+                        //        .oncoprint_custom_driver_annotation_binary_menu_label!
+                        //}
+                        //customDriverDescription={
+                        //    getServerConfig()
+                        //        .oncoprint_custom_driver_annotation_binary_menu_description!
+                        //}
+                        //customDriverTiersName={
+                        //    getServerConfig()
+                        //        .oncoprint_custom_driver_annotation_tiers_menu_label!
+                        //}
+                        //customDriverTiersDescription={
+                        //    getServerConfig()
+                        //        .oncoprint_custom_driver_annotation_tiers_menu_description!
+                        //}
                     />
                 </div>
             </div>

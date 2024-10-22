@@ -3560,6 +3560,10 @@ export class PatientViewPageStore {
                     mutationalProfile?.molecularProfileId
                 );
 
+                //const mergedMutationData = mergeMutations(
+                //    mutationData
+                //);
+
                 result.push({
                     patient_id: patient.patientId,
                     study_id: patient.studyId,
@@ -3581,17 +3585,12 @@ export class PatientViewPageStore {
                         )
                     ),
                     mutationData: mutationData,
+                    sampleIds: currentSampleIds,
                 });
             }
 
             console.group('### TEST INITIAL PATIENTS ###');
             console.log(result);
-            console.log(
-                getSampleTumorTypeMap(
-                    this.clinicalDataForSamples.result,
-                    this.studyMetaData.result?.cancerType.name
-                )
-            );
             console.groupEnd();
 
             return result;

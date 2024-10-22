@@ -367,10 +367,13 @@ export async function deleteMtbUsingDELETE(
 }
 
 export async function checkPermissionUsingGET(url: string, studyId: string) {
-    console.log('### MTB ### checkPermissionUsingGET - Calling GET: ' + url);
     let studyParam = 'studyId=' + studyId;
     let seqParam = 'seq=' + new Date().getTime();
     let realUrl = url + '?' + studyParam + '&' + seqParam;
+
+    console.log(
+        '### MTB ### checkPermissionUsingGET - Calling GET: ' + realUrl
+    );
 
     // returns boolean array[]
     // boolArray[0] is used for whether user is logged in
@@ -418,7 +421,7 @@ export async function checkPermissionUsingGET(url: string, studyId: string) {
             } else {
                 let usingLocalhost = url.includes('localhost');
                 console.group(
-                    '### MTB ### ERROR checkPermissionUsingGET ' + url
+                    '### MTB ### ERROR checkPermissionUsingGET ' + realUrl
                 );
                 console.log(err);
                 if (usingLocalhost)
