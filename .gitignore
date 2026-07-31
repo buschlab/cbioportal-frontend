@@ -70,4 +70,5 @@ api-e2e/validation.js
 .vs/
 env/custom.sh
 startup_cbpf.sh
-.posit/assistant/settings.json
+.posit/
+.positron/

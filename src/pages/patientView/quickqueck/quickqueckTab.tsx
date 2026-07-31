@@ -3,244 +3,27 @@ import { observer } from 'mobx-react';
 import { observable, action, computed, makeObservable } from 'mobx';
 import { Mutation } from 'cbioportal-ts-api-client';
 import LoadingIndicator from 'shared/components/loadingIndicator/LoadingIndicator';
-import LazyMobXTable, {
-    Column,
-} from 'shared/components/lazyMobXTable/LazyMobXTable';
+import LazyMobXTable from 'shared/components/lazyMobXTable/LazyMobXTable';
+import { CollapsibleTreeSelect } from './CollapsibleTreeSelect';
+import { buildQuickqueckColumns } from './utils/quickqueckColumns';
+import { getQuickqueckData } from './utils/quickqueckAPIQuery';
 import {
-    getQuickqueckData,
-    QuickqueckContact,
-    QuickqueckData,
-    QuickqueckLookupEntry,
-    QuickqueckStudy,
-    AgeRangeMap,
     PHASE_FILTER_MAP,
     PHASE_FILTER_OPTIONS,
     collectDescendantIds,
-} from './utils/quickqueckAPIQuery';
-import { CollapsibleTreeSelect } from './CollapsibleTreeSelect';
+} from './utils/quickqueckLookups';
+import {
+    QuickqueckData,
+    QuickqueckLookupEntry,
+    QuickqueckStudy,
+} from './utils/quickqueckTypes';
 
-function renderContacts(contacts: QuickqueckContact[]): JSX.Element {
-    if (contacts.length === 0) return <span>—</span>;
-    return (
-        <span>
-            {contacts.map((c, i) => (
-                <span key={i}>
-                    {i > 0 && <br />}
-                    {c.department && (
-                        <span style={{ color: '#666' }}>{c.department}: </span>
-                    )}
-                    {c.email ? (
-                        <a href={`mailto:${c.email}`}>{c.name}</a>
-                    ) : (
-                        c.name
-                    )}
-                </span>
-            ))}
-        </span>
-    );
-}
-
-type SelectOption = { value: string | number; label: string };
-
-function buildColumns(
-    entityMap: Record<number, string>,
-    phaseMap: Record<number, string>,
-    therapyLineMap: Record<number, string>,
-    ageRangeMap: AgeRangeMap
-    // clinicCityMap: ClinicCityMap  — kept for future City column
-): Column<QuickqueckStudy>[] {
-    return [
-        {
-            name: 'Study',
-            render: (s: QuickqueckStudy) => (
-                <a
-                    href={`https://quickqueck.de/detail/${s.id}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                >
-                    {s.study_name}
-                </a>
-            ),
-            sortBy: (s: QuickqueckStudy) => s.study_name,
-            filter: (s, filterString) =>
-                s.study_name.toLowerCase().includes(filterString.toLowerCase()),
-            width: 300,
-        },
-        {
-            name: 'Number',
-            render: (s: QuickqueckStudy) => (
-                <a
-                    href={s.study_link}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                >
-                    {s.study_number}
-                </a>
-            ),
-            sortBy: (s: QuickqueckStudy) => s.study_number,
-            filter: (s, filterString) =>
-                s.study_number
-                    .toLowerCase()
-                    .includes(filterString.toLowerCase()),
-            width: 130,
-        },
-        {
-            name: 'Center',
-            render: (s: QuickqueckStudy) => <span>{s.group_name}</span>,
-            sortBy: (s: QuickqueckStudy) => s.group_name,
-            filter: (s, filterString) =>
-                s.group_name.toLowerCase().includes(filterString.toLowerCase()),
-            width: 160,
-        },
-        /*
-        {
-            name: 'City',
-            render: (s: QuickqueckStudy) => (
-                <span>{clinicCityMap[s.group] ?? '—'}</span>
-            ),
-            sortBy: (s: QuickqueckStudy) => clinicCityMap[s.group] ?? '',
-            filter: (s, filterString) =>
-                (clinicCityMap[s.group] ?? '')
-                    .toLowerCase()
-                    .includes(filterString.toLowerCase()),
-            width: 110,
-        },
-        */
-        {
-            name: 'Entity',
-            render: (s: QuickqueckStudy) => (
-                <span>{entityMap[s.entity] ?? String(s.entity)}</span>
-            ),
-            sortBy: (s: QuickqueckStudy) =>
-                entityMap[s.entity] ?? String(s.entity),
-            filter: (s, filterString) =>
-                (entityMap[s.entity] ?? '')
-                    .toLowerCase()
-                    .includes(filterString.toLowerCase()),
-            width: 140,
-        },
-        {
-            name: 'Therapy Line',
-            render: (s: QuickqueckStudy) => (
-                <span>
-                    {therapyLineMap[s.therapy_line] ?? String(s.therapy_line)}
-                </span>
-            ),
-            sortBy: (s: QuickqueckStudy) =>
-                therapyLineMap[s.therapy_line] ?? String(s.therapy_line),
-            filter: (s, filterString) =>
-                (therapyLineMap[s.therapy_line] ?? '')
-                    .toLowerCase()
-                    .includes(filterString.toLowerCase()),
-            width: 110,
-        },
-        {
-            name: 'Phase',
-            render: (s: QuickqueckStudy) => (
-                <span>
-                    {s.phase !== null
-                        ? phaseMap[s.phase] ?? String(s.phase)
-                        : '—'}
-                </span>
-            ),
-            sortBy: (s: QuickqueckStudy) =>
-                s.phase !== null ? phaseMap[s.phase] ?? String(s.phase) : '',
-            filter: (s, filterString) =>
-                (s.phase !== null ? phaseMap[s.phase] ?? '' : '')
-                    .toLowerCase()
-                    .includes(filterString.toLowerCase()),
-            width: 90,
-        },
-        {
-            name: 'Min Age',
-            render: (s: QuickqueckStudy) => {
-                const range = ageRangeMap[s.age_group];
-                return <span>{range?.min ?? '0'}</span>;
-            },
-            sortBy: (s: QuickqueckStudy) => ageRangeMap[s.age_group]?.min ?? -1,
-            filter: (s, filterString) =>
-                String(ageRangeMap[s.age_group]?.min ?? '').includes(
-                    filterString
-                ),
-            width: 70,
-        },
-        {
-            name: 'Max Age',
-            render: (s: QuickqueckStudy) => {
-                const range = ageRangeMap[s.age_group];
-                return <span>{range?.max ?? '∞'}</span>;
-            },
-            sortBy: (s: QuickqueckStudy) =>
-                ageRangeMap[s.age_group]?.max ?? Infinity,
-            filter: (s, filterString) =>
-                String(ageRangeMap[s.age_group]?.max ?? '').includes(
-                    filterString
-                ),
-            width: 70,
-        },
-        {
-            name: 'Trial Description',
-            render: (s: QuickqueckStudy) => (
-                <span style={{ whiteSpace: 'pre-wrap' }}>{s.criteria}</span>
-            ),
-            sortBy: (s: QuickqueckStudy) => s.criteria,
-            filter: (s, filterString) =>
-                s.criteria.toLowerCase().includes(filterString.toLowerCase()),
-            width: 320,
-        },
-        {
-            name: 'Contact (Clinician)',
-            render: (s: QuickqueckStudy) => renderContacts(s.doctors),
-            sortBy: (s: QuickqueckStudy) =>
-                s.doctors.map(c => c.name).join(', '),
-            filter: (s, filterString) =>
-                s.doctors.some(
-                    c =>
-                        c.name
-                            .toLowerCase()
-                            .includes(filterString.toLowerCase()) ||
-                        (c.email ?? '')
-                            .toLowerCase()
-                            .includes(filterString.toLowerCase())
-                ),
-            width: 200,
-        },
-        {
-            name: 'Contact (Assistance)',
-            render: (s: QuickqueckStudy) => renderContacts(s.assistants),
-            sortBy: (s: QuickqueckStudy) =>
-                s.assistants.map(c => c.name).join(', '),
-            filter: (s, filterString) =>
-                s.assistants.some(
-                    c =>
-                        c.name
-                            .toLowerCase()
-                            .includes(filterString.toLowerCase()) ||
-                        (c.email ?? '')
-                            .toLowerCase()
-                            .includes(filterString.toLowerCase())
-                ),
-            width: 200,
-        },
-        {
-            name: 'Last Modified',
-            render: (s: QuickqueckStudy) => (
-                <span>
-                    {s.last_modified !== null
-                        ? new Date(s.last_modified).toLocaleDateString()
-                        : '—'}
-                </span>
-            ),
-            sortBy: (s: QuickqueckStudy) => s.last_modified,
-            width: 110,
-        },
-    ];
-}
+type QuickqueckTabProps = {
+    mutations?: Mutation[][];
+};
 
 @observer
-export default class QuickqueckTab extends React.Component<{
-    mutations?: Mutation[][];
-}> {
+export default class QuickqueckTab extends React.Component<QuickqueckTabProps> {
     @observable private data: QuickqueckData | null = null;
     @observable private isLoading = true;
     @observable private error: string | null = null;
@@ -253,7 +36,7 @@ export default class QuickqueckTab extends React.Component<{
     @observable private mutationQuery = '';
     @observable private mutationDropdownOpen = false;
 
-    constructor(props: {}) {
+    constructor(props: QuickqueckTabProps) {
         super(props);
         makeObservable(this);
     }
@@ -275,39 +58,27 @@ export default class QuickqueckTab extends React.Component<{
         }
     }
 
-    // --- Filtered studies ---
-
     @computed get filteredStudies(): QuickqueckStudy[] {
         if (!this.data) return [];
         const { ageRangeMap } = this.data;
 
-        // Expand selected entity IDs: selecting a parent also matches all its descendants.
-        const expandedEntityIds = new Set<number>();
-        if (this.selectedEntities.size > 0) {
-            const expand = (entries: QuickqueckLookupEntry[]) => {
-                for (const entry of entries) {
-                    if (this.selectedEntities.has(entry.id)) {
-                        for (const id of collectDescendantIds(entry)) {
-                            expandedEntityIds.add(id);
-                        }
-                    }
-                    if (entry.children) expand(entry.children);
-                }
-            };
-            expand(this.data!.rawEntities);
-        }
+        const expandedEntityIds = this.expandedSelectedEntityIds;
 
         return this.data.studies.filter(s => {
             if (
                 this.selectedCenters.size > 0 &&
                 !this.selectedCenters.has(s.group)
-            )
+            ) {
                 return false;
+            }
+
             if (
                 this.selectedEntities.size > 0 &&
                 !expandedEntityIds.has(s.entity)
-            )
+            ) {
                 return false;
+            }
+
             if (this.selectedPhases.size > 0) {
                 const phaseMatches =
                     s.phase !== null &&
@@ -316,33 +87,57 @@ export default class QuickqueckTab extends React.Component<{
                     );
                 if (!phaseMatches) return false;
             }
+
             if (
                 this.selectedTherapyLines.size > 0 &&
                 !this.selectedTherapyLines.has(s.therapy_line)
-            )
+            ) {
                 return false;
+            }
+
             if (this.patientAge !== null) {
                 const range = ageRangeMap[s.age_group];
                 if (range) {
-                    if (range.min !== null && this.patientAge < range.min)
+                    if (range.min !== null && this.patientAge < range.min) {
                         return false;
-                    if (range.max !== null && this.patientAge > range.max)
+                    }
+                    if (range.max !== null && this.patientAge > range.max) {
                         return false;
+                    }
                 }
             }
+
             if (this.mutationQuery.trim()) {
-                if (
-                    !s.criteria
-                        .toLowerCase()
-                        .includes(this.mutationQuery.toLowerCase())
-                )
-                    return false;
+                return s.criteria
+                    .toLowerCase()
+                    .includes(this.mutationQuery.toLowerCase());
             }
+
             return true;
         });
     }
 
-    // --- Count maps (based on all studies, not filtered) ---
+    /** Selecting a parent entity also matches every descendant entity. */
+    @computed private get expandedSelectedEntityIds(): Set<number> {
+        const expandedEntityIds = new Set<number>();
+        if (!this.data || this.selectedEntities.size === 0) {
+            return expandedEntityIds;
+        }
+
+        const expand = (entries: QuickqueckLookupEntry[]) => {
+            for (const entry of entries) {
+                if (this.selectedEntities.has(entry.id)) {
+                    for (const id of collectDescendantIds(entry)) {
+                        expandedEntityIds.add(id);
+                    }
+                }
+                if (entry.children) expand(entry.children);
+            }
+        };
+        expand(this.data.rawEntities);
+
+        return expandedEntityIds;
+    }
 
     @computed get centerCountMap(): Record<number, number> {
         if (!this.data) return {};
@@ -362,9 +157,7 @@ export default class QuickqueckTab extends React.Component<{
         return map;
     }
 
-    // --- Filter entries for CollapsibleTreeSelect ---
-
-    // Phase: uses PHASE_FILTER_OPTIONS index as stable numeric ID.
+    /** Phase labels are canonical UI filters that may match several API IDs. */
     @computed get phaseEntries(): QuickqueckLookupEntry[] {
         if (!this.data) return [];
         const presentPhaseIds = new Set(
@@ -372,6 +165,7 @@ export default class QuickqueckTab extends React.Component<{
                 .map(s => s.phase)
                 .filter((p): p is number => p !== null)
         );
+
         return PHASE_FILTER_OPTIONS.map((label, idx) => ({ label, idx }))
             .filter(({ label }) =>
                 [...(PHASE_FILTER_MAP[label] ?? [])].some(id =>
@@ -392,7 +186,6 @@ export default class QuickqueckTab extends React.Component<{
         return map;
     }
 
-    // Maps selected phase labels back to PHASE_FILTER_OPTIONS indices for the tree select.
     @computed get selectedPhaseIndices(): Set<number> {
         return new Set(
             Array.from(this.selectedPhases)
@@ -420,11 +213,11 @@ export default class QuickqueckTab extends React.Component<{
         return map;
     }
 
-    // Deduplicated list of gene symbols and full mutation strings (e.g. "KRAS", "KRAS G12C")
-    // derived from the patient's mutations, for the suggestion dropdown.
+    /** Mutation suggestions are derived from patient mutations in gene and protein-change form. */
     @computed get mutationSuggestions(): string[] {
         const { mutations } = this.props;
         if (!mutations || mutations.length === 0) return [];
+
         const suggestions = new Set<string>();
         for (const group of mutations) {
             for (const m of group) {
@@ -440,33 +233,24 @@ export default class QuickqueckTab extends React.Component<{
         return Array.from(suggestions).sort();
     }
 
-    /*
-    @action.bound
-    private onCityChange(opts: readonly SelectOption[]) {
-        this.selectedCities = new Set(opts.map(o => o.value as string));
-    }
-    */
-
     @action.bound
     private onCenterToggle(id: number) {
-        const next = new Set(this.selectedCenters);
-        if (next.has(id)) next.delete(id);
-        else next.add(id);
-        this.selectedCenters = next;
+        this.selectedCenters = this.toggleSelectedId(this.selectedCenters, id);
     }
 
     @action.bound
     private onEntityToggle(id: number) {
-        const next = new Set(this.selectedEntities);
-        if (next.has(id)) next.delete(id);
-        else next.add(id);
-        this.selectedEntities = next;
+        this.selectedEntities = this.toggleSelectedId(
+            this.selectedEntities,
+            id
+        );
     }
 
     @action.bound
     private onPhaseToggle(id: number) {
         const label = PHASE_FILTER_OPTIONS[id];
         if (!label) return;
+
         const next = new Set(this.selectedPhases);
         if (next.has(label)) next.delete(label);
         else next.add(label);
@@ -475,10 +259,10 @@ export default class QuickqueckTab extends React.Component<{
 
     @action.bound
     private onTherapyLineToggle(id: number) {
-        const next = new Set(this.selectedTherapyLines);
-        if (next.has(id)) next.delete(id);
-        else next.add(id);
-        this.selectedTherapyLines = next;
+        this.selectedTherapyLines = this.toggleSelectedId(
+            this.selectedTherapyLines,
+            id
+        );
     }
 
     @action.bound
@@ -497,7 +281,15 @@ export default class QuickqueckTab extends React.Component<{
         this.mutationQuery = '';
     }
 
-    // --- Filter bar ---
+    private toggleSelectedId(
+        selectedIds: Set<number>,
+        id: number
+    ): Set<number> {
+        const next = new Set(selectedIds);
+        if (next.has(id)) next.delete(id);
+        else next.add(id);
+        return next;
+    }
 
     private renderFilterBar() {
         const hasAnyFilter =
@@ -659,141 +451,7 @@ export default class QuickqueckTab extends React.Component<{
                         }}
                     />
                 </div>
-                <div
-                    style={{
-                        display: 'flex',
-                        flexDirection: 'column',
-                        gap: '4px',
-                        position: 'relative',
-                    }}
-                >
-                    <label
-                        style={{
-                            marginBottom: 0,
-                            fontWeight: 600,
-                            fontSize: '0.85em',
-                        }}
-                    >
-                        Mutation
-                    </label>
-                    <div
-                        style={{
-                            display: 'flex',
-                            border: '1px solid #ccc',
-                            borderRadius: 4,
-                            background: '#fff',
-                            minWidth: 180,
-                        }}
-                    >
-                        <input
-                            type="text"
-                            placeholder="e.g. KRAS G12C"
-                            value={this.mutationQuery}
-                            onChange={action(
-                                (e: React.ChangeEvent<HTMLInputElement>) => {
-                                    this.mutationQuery = e.target.value;
-                                    this.mutationDropdownOpen = true;
-                                }
-                            )}
-                            onFocus={action(() => {
-                                this.mutationDropdownOpen = true;
-                            })}
-                            style={{
-                                flex: 1,
-                                border: 'none',
-                                outline: 'none',
-                                padding: '6px 8px',
-                                fontSize: '0.95em',
-                                borderRadius: 4,
-                            }}
-                        />
-                        {this.mutationSuggestions.length > 0 && (
-                            <button
-                                onClick={action(() => {
-                                    this.mutationDropdownOpen = !this
-                                        .mutationDropdownOpen;
-                                })}
-                                style={{
-                                    border: 'none',
-                                    background: 'transparent',
-                                    cursor: 'pointer',
-                                    padding: '0 8px',
-                                    color: '#999',
-                                    fontSize: '0.8em',
-                                }}
-                            >
-                                ▼
-                            </button>
-                        )}
-                    </div>
-                    {this.mutationDropdownOpen &&
-                        this.mutationSuggestions.length > 0 && (
-                            <>
-                                <div
-                                    style={{
-                                        position: 'fixed',
-                                        inset: 0,
-                                        zIndex: 9998,
-                                    }}
-                                    onClick={action(() => {
-                                        this.mutationDropdownOpen = false;
-                                    })}
-                                />
-                                <div
-                                    style={{
-                                        position: 'absolute',
-                                        top: '100%',
-                                        left: 0,
-                                        zIndex: 9999,
-                                        background: '#fff',
-                                        border: '1px solid #ccc',
-                                        borderRadius: 4,
-                                        boxShadow:
-                                            '0 4px 12px rgba(0,0,0,0.15)',
-                                        maxHeight: 240,
-                                        overflowY: 'auto',
-                                        minWidth: 180,
-                                        marginTop: 2,
-                                    }}
-                                >
-                                    {this.mutationSuggestions
-                                        .filter(
-                                            s =>
-                                                !this.mutationQuery ||
-                                                s
-                                                    .toLowerCase()
-                                                    .includes(
-                                                        this.mutationQuery.toLowerCase()
-                                                    )
-                                        )
-                                        .map(suggestion => (
-                                            <div
-                                                key={suggestion}
-                                                onClick={action(() => {
-                                                    this.mutationQuery = suggestion;
-                                                    this.mutationDropdownOpen = false;
-                                                })}
-                                                style={{
-                                                    padding: '6px 12px',
-                                                    cursor: 'pointer',
-                                                    fontSize: '0.9em',
-                                                }}
-                                                onMouseEnter={e =>
-                                                    (e.currentTarget.style.background =
-                                                        '#f5f5f5')
-                                                }
-                                                onMouseLeave={e =>
-                                                    (e.currentTarget.style.background =
-                                                        '')
-                                                }
-                                            >
-                                                {suggestion}
-                                            </div>
-                                        ))}
-                                </div>
-                            </>
-                        )}
-                </div>
+                {this.renderMutationFilter()}
                 <div
                     style={{
                         display: 'flex',
@@ -815,6 +473,147 @@ export default class QuickqueckTab extends React.Component<{
                     </small>
                 </div>
             </div>
+        );
+    }
+
+    private renderMutationFilter() {
+        return (
+            <div
+                style={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '4px',
+                    position: 'relative',
+                }}
+            >
+                <label
+                    style={{
+                        marginBottom: 0,
+                        fontWeight: 600,
+                        fontSize: '0.85em',
+                    }}
+                >
+                    Mutation
+                </label>
+                <div
+                    style={{
+                        display: 'flex',
+                        border: '1px solid #ccc',
+                        borderRadius: 4,
+                        background: '#fff',
+                        minWidth: 180,
+                    }}
+                >
+                    <input
+                        type="text"
+                        placeholder="e.g. KRAS G12C"
+                        value={this.mutationQuery}
+                        onChange={action(
+                            (e: React.ChangeEvent<HTMLInputElement>) => {
+                                this.mutationQuery = e.target.value;
+                                this.mutationDropdownOpen = true;
+                            }
+                        )}
+                        onFocus={action(() => {
+                            this.mutationDropdownOpen = true;
+                        })}
+                        style={{
+                            flex: 1,
+                            border: 'none',
+                            outline: 'none',
+                            padding: '6px 8px',
+                            fontSize: '0.95em',
+                            borderRadius: 4,
+                        }}
+                    />
+                    {this.mutationSuggestions.length > 0 && (
+                        <button
+                            onClick={action(() => {
+                                this.mutationDropdownOpen = !this
+                                    .mutationDropdownOpen;
+                            })}
+                            style={{
+                                border: 'none',
+                                background: 'transparent',
+                                cursor: 'pointer',
+                                padding: '0 8px',
+                                color: '#999',
+                                fontSize: '0.8em',
+                            }}
+                        >
+                            ▼
+                        </button>
+                    )}
+                </div>
+                {this.mutationDropdownOpen &&
+                    this.mutationSuggestions.length > 0 &&
+                    this.renderMutationSuggestions()}
+            </div>
+        );
+    }
+
+    private renderMutationSuggestions() {
+        return (
+            <>
+                <div
+                    style={{
+                        position: 'fixed',
+                        inset: 0,
+                        zIndex: 9998,
+                    }}
+                    onClick={action(() => {
+                        this.mutationDropdownOpen = false;
+                    })}
+                />
+                <div
+                    style={{
+                        position: 'absolute',
+                        top: '100%',
+                        left: 0,
+                        zIndex: 9999,
+                        background: '#fff',
+                        border: '1px solid #ccc',
+                        borderRadius: 4,
+                        boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+                        maxHeight: 240,
+                        overflowY: 'auto',
+                        minWidth: 180,
+                        marginTop: 2,
+                    }}
+                >
+                    {this.mutationSuggestions
+                        .filter(
+                            s =>
+                                !this.mutationQuery ||
+                                s
+                                    .toLowerCase()
+                                    .includes(this.mutationQuery.toLowerCase())
+                        )
+                        .map(suggestion => (
+                            <div
+                                key={suggestion}
+                                onClick={action(() => {
+                                    this.mutationQuery = suggestion;
+                                    this.mutationDropdownOpen = false;
+                                })}
+                                style={{
+                                    padding: '6px 12px',
+                                    cursor: 'pointer',
+                                    fontSize: '0.9em',
+                                }}
+                                onMouseEnter={e =>
+                                    (e.currentTarget.style.background =
+                                        '#f5f5f5')
+                                }
+                                onMouseLeave={e =>
+                                    (e.currentTarget.style.background = '')
+                                }
+                            >
+                                {suggestion}
+                            </div>
+                        ))}
+                </div>
+            </>
         );
     }
 
@@ -841,7 +640,7 @@ export default class QuickqueckTab extends React.Component<{
             );
         }
 
-        const columns = buildColumns(
+        const columns = buildQuickqueckColumns(
             this.data.entityMap,
             this.data.phaseMap,
             this.data.therapyLineMap,

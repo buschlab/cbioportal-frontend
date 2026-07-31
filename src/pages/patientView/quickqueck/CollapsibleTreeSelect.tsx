@@ -1,14 +1,16 @@
 import * as React from 'react';
 import { observable, action, makeObservable } from 'mobx';
 import { observer } from 'mobx-react';
-import { QuickqueckLookupEntry } from './utils/quickqueckAPIQuery';
+import { QuickqueckLookupEntry } from './utils/quickqueckTypes';
 
 interface CollapsibleTreeSelectProps {
     entries: QuickqueckLookupEntry[];
+    /** Only entries with these IDs, or visible descendants with these IDs, are shown. */
     presentIds: Set<number>;
     selectedIds: Set<number>;
     onToggle: (id: number) => void;
-    countMap?: Record<number, number>; // leaf-level counts; parent totals are summed recursively
+    /** Leaf-level counts; parent totals are summed recursively. */
+    countMap?: Record<number, number>;
     placeholder?: string;
 }
 
