@@ -55,7 +55,6 @@ export type QuickqueckApiResponse = {
     age_groups: QuickqueckLookupEntry[];
 };
 
-export type ClinicCityMap = Record<number, string>;
 export type QuickqueckLookupMap = Record<number, string>;
 export type AgeRangeMap = Record<number, AgeRange>;
 
@@ -66,7 +65,6 @@ export type QuickqueckData = {
     therapyLineMap: QuickqueckLookupMap;
     ageGroupMap: QuickqueckLookupMap;
     ageRangeMap: AgeRangeMap;
-    clinicCityMap: ClinicCityMap;
     lastUpdated: number;
     rawEntities: QuickqueckLookupEntry[];
     rawClinicsAsEntries: QuickqueckLookupEntry[];

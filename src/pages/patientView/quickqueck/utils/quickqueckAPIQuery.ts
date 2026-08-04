@@ -1,9 +1,5 @@
 import { parseAgeRange, parseContactList } from './quickqueckParsing';
-import {
-    buildClinicCityMap,
-    buildLookupMap,
-    clinicsToLookupEntries,
-} from './quickqueckLookups';
+import { buildLookupMap, clinicsToLookupEntries } from './quickqueckLookups';
 import {
     AgeRangeMap,
     QuickqueckApiResponse,
@@ -35,7 +31,6 @@ function buildQuickqueckData(
         therapyLineMap: buildLookupMap(raw.therapy_lines),
         ageGroupMap: buildLookupMap(raw.age_groups),
         ageRangeMap,
-        clinicCityMap: buildClinicCityMap(raw.clinics),
         lastUpdated: date,
         rawEntities: raw.entities,
         rawClinicsAsEntries: clinicsToLookupEntries(raw.clinics),
