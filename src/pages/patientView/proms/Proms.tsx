@@ -41,13 +41,14 @@ import {
     SHOW_REFERENCE_LINE,
     SHOW_STANDARD_RANGE,
     SHOW_THRESHOLDS,
+    PROM_EVENT_TYPE,
+    SUBTYPE,
 } from './utils/EQ-5D-5LChartMetadata';
 import PieChart from './components/PieChartProms';
 import FontAwesome from 'react-fontawesome';
 import { PatientViewPageStore } from 'pages/patientView/clinicalInformation/PatientViewPageStore';
 import PatientViewMutationsDataStore from '../mutation/PatientViewMutationsDataStore';
 import { Grid, Row, Col } from 'react-bootstrap';
-import 'bootstrap/dist/css/bootstrap.min.css';
 import { DefaultTooltip } from 'cbioportal-frontend-commons';
 import { ClinicalEvent } from 'cbioportal-ts-api-client';
 import * as Constants from './utils/PromChartConstants';
@@ -95,7 +96,14 @@ const InfoTooltip = ({
 const useProcessedData = (data: ClinicalEvent[]): DataSet[] => {
     // Filter data so that only PROM events are included
     const promData = data.filter(
-        (event: ClinicalEvent) => event.eventType === QUESTIONNAIRE_NAME
+        (event: ClinicalEvent) =>
+            event.eventType === QUESTIONNAIRE_NAME ||
+            (event.eventType === PROM_EVENT_TYPE &&
+                event.attributes.find(
+                    eventData =>
+                        eventData.key === SUBTYPE &&
+                        eventData.value === QUESTIONNAIRE_NAME
+                ) !== undefined)
     );
 
     let datasetKeys: string[] = [];
@@ -181,8 +189,8 @@ const useProcessedData = (data: ClinicalEvent[]): DataSet[] => {
             if (keysForEQVASPlot.includes(key)) {
                 if (value !== undefined) {
                     value = Number.parseFloat(value).toFixed(3);
+                    addElementToDataset(eqVASDataset, key, [date, value]);
                 }
-                addElementToDataset(eqVASDataset, key, [date, Number(value)]);
             } else if (keysForDimensionPlot.includes(key)) {
                 // Push values to an array of which the average will be calculated
                 if (AVERAGE_KEY !== undefined) {
@@ -200,10 +208,7 @@ const useProcessedData = (data: ClinicalEvent[]): DataSet[] => {
 
                 // Check again if value is well-defined (needed for the average case) and push data to data set
                 if (value !== undefined && value.length > 0) {
-                    addElementToDataset(dimensionDataset, key, [
-                        date,
-                        Number(value),
-                    ]);
+                    addElementToDataset(dimensionDataset, key, [date, value]);
                 }
             } else {
                 return;
@@ -258,7 +263,7 @@ const useProcessedData = (data: ClinicalEvent[]): DataSet[] => {
         }
 
         // Transform latestScores to DataSet
-        latestScores.forEach((score: [string, number]) => {
+        latestScores.forEach(score => {
             addElementToDataset(currentScoreDataset, score[0], [
                 score[0],
                 score[1],
@@ -380,7 +385,14 @@ const Proms = ({
 
     // Calculate reference value displayed on EQ VAS chart
     const allPromData = allClinicalEventsInStudy.filter(
-        (event: ClinicalEvent) => event.eventType === QUESTIONNAIRE_NAME
+        (event: ClinicalEvent) =>
+            event.eventType === QUESTIONNAIRE_NAME ||
+            (event.eventType === PROM_EVENT_TYPE &&
+                event.attributes.find(
+                    eventData =>
+                        eventData.key === SUBTYPE &&
+                        eventData.value === QUESTIONNAIRE_NAME
+                ) !== undefined)
     );
     let arrayOfAllEQs: number[] = [];
     allPromData.forEach((event: ClinicalEvent) => {

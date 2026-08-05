@@ -92,6 +92,7 @@ $container-padding: 10px;
 
 .proms .icon-wrapper {
     display: flex;
+    font-size: large;
     justify-content: flex-end; /* Ensure icon stays on the right */
     margin-top: 0.5 * $container-padding;
     margin-bottom: $container-padding;

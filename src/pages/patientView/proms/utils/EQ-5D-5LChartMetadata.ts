@@ -5,6 +5,8 @@
 
 // Questionnaire identification
 export const QUESTIONNAIRE_NAME = 'EQ-5D-5L';
+export const PROM_EVENT_TYPE = 'PROMs';
+export const SUBTYPE = 'SUBTYPE';
 
 // Dataset keys
 export const PROM_KEYS = [

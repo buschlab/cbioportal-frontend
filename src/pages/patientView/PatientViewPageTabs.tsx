@@ -40,7 +40,10 @@ import FollowUpTable from './therapyRecommendation/FollowUpTable';
 import MutationTableWrapper from './mutation/MutationTableWrapper';
 import Proms from './proms/Proms';
 import { doClinicalEventsHavePromData } from './proms/utils/PromChartHelperFunctions';
-import { QUESTIONNAIRE_NAME as QUESTIONNAIRE_NAME_EQ_5D_5L } from './proms/utils/EQ-5D-5LChartMetadata';
+import {
+    QUESTIONNAIRE_NAME as QUESTIONNAIRE_NAME_EQ_5D_5L,
+    PROM_EVENT_TYPE,
+} from './proms/utils/EQ-5D-5LChartMetadata';
 import { PatientViewPageInner } from 'pages/patientView/PatientViewPage';
 import { Else, If } from 'react-if';
 
@@ -867,7 +870,7 @@ export function tabs(
         pageComponent.patientViewPageStore.clinicalEvents.result.length > 0 &&
         doClinicalEventsHavePromData(
             pageComponent.patientViewPageStore.clinicalEvents.result,
-            [QUESTIONNAIRE_NAME_EQ_5D_5L]
+            [QUESTIONNAIRE_NAME_EQ_5D_5L, PROM_EVENT_TYPE]
         ) &&
         tabs.push(
             <MSKTab

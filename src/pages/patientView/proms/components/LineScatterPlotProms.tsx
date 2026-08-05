@@ -870,6 +870,10 @@ const LineScatterPlot: React.FC<LineScatterPlotProps> = ({
                     x={secondYRange ? width / 5 + 15 : (5 / 6) * width}
                     gutter={18} // only for horizontal alignment
                     name="legend"
+                    style={{
+                        data: { cursor: 'pointer' },
+                        labels: { cursor: 'pointer' },
+                    }}
                     data={
                         //
                         //   ?
@@ -899,6 +903,7 @@ const LineScatterPlot: React.FC<LineScatterPlotProps> = ({
                             },
                         }))
                     }
+                    labels={({ datum }: any) => datum.name}
                     events={legendEvents}
                 />
             </VictoryChart>

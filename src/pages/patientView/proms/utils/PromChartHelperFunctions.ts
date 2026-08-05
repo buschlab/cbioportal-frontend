@@ -91,11 +91,11 @@ export const transformString = (input: string): string => {
 export const addElementToDataset = (
     dataset: DataSet,
     key: string,
-    element: [string, number]
+    element: [string, string | number | null]
 ) => {
     const datum: Datum = {
         x: element[0],
-        y: element[1],
+        y: element[1] === null ? null : Number(element[1]),
     };
     if (dataset[key]) {
         // If the key exists, push the new element to the array
