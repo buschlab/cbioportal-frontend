@@ -22,7 +22,12 @@ import TrackHeader, {
     getTrackHeadersG,
 } from './TrackHeader';
 import TickAxis, { TICK_AXIS_COLOR, TICK_AXIS_HEIGHT } from './TickAxis';
-import { EventPosition, TickIntervalEnum, ZoomBounds } from './types';
+import {
+    EventPosition,
+    TickIntervalEnum,
+    TimelineEvent,
+    ZoomBounds,
+} from './types';
 import './timeline.scss';
 import { DownloadControls } from 'cbioportal-frontend-commons';
 import CustomTrack, { CustomTrackSpecification } from './CustomTrack';
@@ -30,6 +35,9 @@ import CustomTrackHeader from './CustomTrackHeader';
 
 import classNames from 'classnames';
 import getSvg from './svg/getSvg';
+
+import { DateFormatProvider } from './lib/DateFormatContext';
+import { calculateStartDate } from './lib/absoluteTimelineDatesHelpers';
 
 interface ITimelineProps {
     store: TimelineStore;
@@ -281,6 +289,16 @@ const Timeline: React.FunctionComponent<ITimelineProps> = observer(function({
 }: ITimelineProps) {
     const tracks = store.data;
     const SCROLLBAR_PADDING = 15;
+    const [startDateOfTimeline, setStartDateOfTimeline] = useState<
+        string | null
+    >(null);
+
+    useEffect(() => {
+        const timelineEvents = store.allItems;
+        const startDate = calculateStartDate(timelineEvents);
+        setStartDateOfTimeline(startDate);
+    }, []);
+
     let height =
         TICK_AXIS_HEIGHT +
         _.sumBy(tracks, t => {
@@ -349,184 +367,216 @@ const Timeline: React.FunctionComponent<ITimelineProps> = observer(function({
             : tracks.filter(t => isTrackVisible(t.track, visibleTracks));
 
     return (
-        <div
-            ref={refs.wrapper}
-            className={'tl-timeline-wrapper'}
-            id={store.uniqueId}
-        >
-            <div className={'tl-timeline-reset-buttons'}>
-                <div className={'tl-timeline-zoom-info'}>
-                    {store.zoomBounds && (
-                        <button
-                            className={'btn btn-xs'}
-                            onClick={() => {
-                                store.setZoomBounds();
-                            }}
-                        >
-                            <i className={'fa fa-search-minus'} /> reset zoom
-                        </button>
-                    )}
-
-                    {!store.zoomBounds && (
-                        <span
-                            onClick={() => {
-                                store.setZoomBounds();
-                            }}
-                        >
-                            <i className={'fa fa-search-plus'} /> drag to zoom
-                        </span>
-                    )}
-                </div>
-
-                {store.expandedTrims && (
-                    <div>
-                        <button
-                            className={'btn btn-xs'}
-                            onClick={store.toggleExpandedTrims}
-                        >
-                            reset axis
-                        </button>
-                    </div>
-                )}
-            </div>
-            <style ref={refs.hoverStyleTag} />
-            <div style={{ flexBasis: width - 28, display: 'flex' }}>
-                {' '}
-                {/* -20 for room for download controls*/}
-                <div
-                    className={'tl-timeline-leftbar'}
-                    style={{ paddingTop: TICK_AXIS_HEIGHT, flexShrink: 0 }}
-                >
-                    <div
-                        ref={refs.timelineHeadersArea}
-                        className={classNames('tl-timeline-tracklabels', {
-                            'tl-displaynone': hideLabels,
-                        })}
-                        style={{
-                            width: headerWidth || 'auto',
-                            minWidth: headerWidth || store.headersWidth,
-                        }}
-                    >
-                        {filteredTracks.map(track => {
-                            return (
-                                <TrackHeader
-                                    store={store}
-                                    track={track.track}
-                                    height={track.height}
-                                    paddingLeft={track.indent}
-                                    handleTrackHover={memoizedHoverCallback}
-                                />
-                            );
-                        })}
-                        {customTracks &&
-                            customTracks.map(track => {
-                                return (
-                                    <CustomTrackHeader
-                                        store={store}
-                                        specification={track}
-                                        handleTrackHover={memoizedHoverCallback}
-                                        disableHover={track.disableHover}
-                                    />
-                                );
-                            })}
-                    </div>
-                </div>
-                <div
-                    className={'tl-viewport-pseudo-border'}
-                    style={{ height: height - SCROLLBAR_PADDING }}
-                />
-                <div
-                    ref={refs.timelineViewPort}
-                    className={'tl-timelineviewport scrollbarAlwaysVisible'}
-                    style={{ flexShrink: 1, height }}
-                >
-                    {store.viewPortWidth > 0 && store.ticks && (
-                        <div
-                            className={'tl-timeline'}
-                            onMouseDown={e =>
-                                handleMouseEvents(e, store, refs, disableZoom)
-                            }
-                            onMouseUp={e =>
-                                handleMouseEvents(e, store, refs, disableZoom)
-                            }
-                            onMouseMove={e =>
-                                handleMouseEvents(e, store, refs, disableZoom)
-                            }
-                            onMouseLeave={e =>
-                                handleMouseEvents(e, store, refs, disableZoom)
-                            }
-                        >
-                            <div
-                                ref={refs.cursor}
-                                style={{ height: height - SCROLLBAR_PADDING }}
-                                className={'tl-cursor'}
+        <DateFormatProvider startDate={startDateOfTimeline}>
+            <div
+                ref={refs.wrapper}
+                className={'tl-timeline-wrapper'}
+                id={store.uniqueId}
+            >
+                <div className={'tl-timeline-reset-buttons'}>
+                    <div className={'tl-timeline-zoom-info'}>
+                        {store.zoomBounds && (
+                            <button
+                                className={'btn btn-xs'}
+                                onClick={() => {
+                                    store.setZoomBounds();
+                                }}
                             >
-                                <div ref={refs.cursorText} />
-                            </div>
-                            <div
-                                ref={refs.zoomSelectBoxMask}
-                                className={'tl-zoom-selectbox-mask'}
-                            />
-                            <div
-                                ref={refs.zoomSelectBox}
-                                style={{ height: height - SCROLLBAR_PADDING }}
-                                className={'tl-zoom-selectbox'}
-                            />
+                                <i className={'fa fa-search-minus'} /> reset
+                                zoom
+                            </button>
+                        )}
 
-                            <svg
-                                ref={refs.timeline}
-                                width={renderWidth}
-                                height={height}
-                                className={'tl-timeline-svg'}
+                        {!store.zoomBounds && (
+                            <span
+                                onClick={() => {
+                                    store.setZoomBounds();
+                                }}
                             >
-                                <g ref={refs.timelineTracksArea}>
-                                    <TimelineTracks
-                                        store={store}
-                                        width={renderWidth}
-                                        customTracks={customTracks}
-                                        handleTrackHover={memoizedHoverCallback}
-                                        visibleTracks={visibleTracks}
-                                    />
-                                    {hideXAxis !== true && (
-                                        <TickAxis
-                                            store={store}
-                                            width={renderWidth}
-                                        />
-                                    )}
-                                    {/*TickAxis needs to go on top so its not covered by tracks*/}
-                                </g>
-                            </svg>
+                                <i className={'fa fa-search-plus'} /> drag to
+                                zoom
+                            </span>
+                        )}
+                    </div>
+
+                    {store.expandedTrims && (
+                        <div>
+                            <button
+                                className={'btn btn-xs'}
+                                onClick={store.toggleExpandedTrims}
+                            >
+                                reset axis
+                            </button>
                         </div>
                     )}
                 </div>
-                <div
-                    className={'tl-viewport-pseudo-border'}
-                    style={{ height: height - SCROLLBAR_PADDING }}
-                />
-                <DownloadControls
-                    buttons={['PDF', 'PNG', 'SVG']}
-                    filename="timeline"
-                    getSvg={() =>
-                        getSvg(
-                            store,
-                            refs.timelineTracksArea.current,
-                            customTracks,
-                            visibleTracks
-                        )
-                    }
-                    additionalRightButtons={[
-                        {
-                            key: 'Data (ZIP)',
-                            content: <span>Data (ZIP)</span>,
-                            onClick: onClickDownload,
-                        },
-                    ]}
-                    dontFade={true}
-                    type={'button'}
-                    style={{ marginLeft: 7 }}
-                />
+                <style ref={refs.hoverStyleTag} />
+                <div style={{ flexBasis: width - 28, display: 'flex' }}>
+                    {' '}
+                    {/* -20 for room for download controls*/}
+                    <div
+                        className={'tl-timeline-leftbar'}
+                        style={{ paddingTop: TICK_AXIS_HEIGHT, flexShrink: 0 }}
+                    >
+                        <div
+                            ref={refs.timelineHeadersArea}
+                            className={classNames('tl-timeline-tracklabels', {
+                                'tl-displaynone': hideLabels,
+                            })}
+                            style={{
+                                width: headerWidth || 'auto',
+                                minWidth: headerWidth || store.headersWidth,
+                            }}
+                        >
+                            {filteredTracks.map(track => {
+                                return (
+                                    <TrackHeader
+                                        store={store}
+                                        track={track.track}
+                                        height={track.height}
+                                        paddingLeft={track.indent}
+                                        handleTrackHover={memoizedHoverCallback}
+                                    />
+                                );
+                            })}
+                            {customTracks &&
+                                customTracks.map(track => {
+                                    return (
+                                        <CustomTrackHeader
+                                            store={store}
+                                            specification={track}
+                                            handleTrackHover={
+                                                memoizedHoverCallback
+                                            }
+                                            disableHover={track.disableHover}
+                                        />
+                                    );
+                                })}
+                        </div>
+                    </div>
+                    <div
+                        className={'tl-viewport-pseudo-border'}
+                        style={{ height: height - SCROLLBAR_PADDING }}
+                    />
+                    <div
+                        ref={refs.timelineViewPort}
+                        className={'tl-timelineviewport scrollbarAlwaysVisible'}
+                        style={{ flexShrink: 1, height }}
+                    >
+                        {store.viewPortWidth > 0 && store.ticks && (
+                            <div
+                                className={'tl-timeline'}
+                                onMouseDown={e =>
+                                    handleMouseEvents(
+                                        e,
+                                        store,
+                                        refs,
+                                        disableZoom
+                                    )
+                                }
+                                onMouseUp={e =>
+                                    handleMouseEvents(
+                                        e,
+                                        store,
+                                        refs,
+                                        disableZoom
+                                    )
+                                }
+                                onMouseMove={e =>
+                                    handleMouseEvents(
+                                        e,
+                                        store,
+                                        refs,
+                                        disableZoom
+                                    )
+                                }
+                                onMouseLeave={e =>
+                                    handleMouseEvents(
+                                        e,
+                                        store,
+                                        refs,
+                                        disableZoom
+                                    )
+                                }
+                            >
+                                <div
+                                    ref={refs.cursor}
+                                    style={{
+                                        height: height - SCROLLBAR_PADDING,
+                                    }}
+                                    className={'tl-cursor'}
+                                >
+                                    <div ref={refs.cursorText} />
+                                </div>
+                                <div
+                                    ref={refs.zoomSelectBoxMask}
+                                    className={'tl-zoom-selectbox-mask'}
+                                />
+                                <div
+                                    ref={refs.zoomSelectBox}
+                                    style={{
+                                        height: height - SCROLLBAR_PADDING,
+                                    }}
+                                    className={'tl-zoom-selectbox'}
+                                />
+
+                                <svg
+                                    ref={refs.timeline}
+                                    width={renderWidth}
+                                    height={height}
+                                    className={'tl-timeline-svg'}
+                                >
+                                    <g ref={refs.timelineTracksArea}>
+                                        <TimelineTracks
+                                            store={store}
+                                            width={renderWidth}
+                                            customTracks={customTracks}
+                                            handleTrackHover={
+                                                memoizedHoverCallback
+                                            }
+                                            visibleTracks={visibleTracks}
+                                        />
+                                        {hideXAxis !== true && (
+                                            <TickAxis
+                                                store={store}
+                                                width={renderWidth}
+                                            />
+                                        )}
+                                        {/*TickAxis needs to go on top so its not covered by tracks*/}
+                                    </g>
+                                </svg>
+                            </div>
+                        )}
+                    </div>
+                    <div
+                        className={'tl-viewport-pseudo-border'}
+                        style={{ height: height - SCROLLBAR_PADDING }}
+                    />
+                    <DownloadControls
+                        buttons={['PDF', 'PNG', 'SVG']}
+                        filename="timeline"
+                        getSvg={() =>
+                            getSvg(
+                                store,
+                                refs.timelineTracksArea.current,
+                                customTracks,
+                                visibleTracks
+                            )
+                        }
+                        additionalRightButtons={[
+                            {
+                                key: 'Data (ZIP)',
+                                content: <span>Data (ZIP)</span>,
+                                onClick: onClickDownload,
+                            },
+                        ]}
+                        dontFade={true}
+                        type={'button'}
+                        style={{ marginLeft: 7 }}
+                    />
+                </div>
             </div>
-        </div>
+        </DateFormatProvider>
     );
 });
 

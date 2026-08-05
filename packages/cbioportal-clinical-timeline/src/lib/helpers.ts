@@ -11,6 +11,10 @@ import {
 import { intersect } from './intersect';
 import _ from 'lodash';
 import { COLOR_ATTRIBUTE_KEY } from '../renderHelpers';
+import {
+    getDateNDaysAfter,
+    parseFlexibleDate,
+} from './absoluteTimelineDatesHelpers';
 
 export const TIMELINE_TRACK_HEIGHT = 20;
 export const TIMELINE_LINE_CHART_TRACK_HEIGHT = 100; // TODO: dynamic?
@@ -200,15 +204,70 @@ export function sortNestedTracks(tracks: TimelineTrackSpecification[]) {
     );
 }
 
-export function formatDate(dayCount: number) {
+/**
+ * Heuristic to calculate the representation of a number in years, months and days
+ * Heuristical formula: 1 year has 365 days, 1 month has 30 days
+ * @param dayCount: number of days (non-negative)
+ * @returns [y, m, d]: tuple representing dayCount as y years, m months, d days
+ */
+const calculateYearsMonthsDaysFromDaysNumber = (
+    dayCount: number
+): [number, number, number] => {
+    const dayCountAbsolute = Math.abs(dayCount);
+    const years = Math.floor(dayCountAbsolute / 365);
+    const months = Math.floor((dayCountAbsolute - years * 365) / 30);
+    const days = Math.floor(dayCountAbsolute - years * 365 - months * 30);
+    return [years, months, days];
+};
+
+export function formatDate(
+    dayCount: number,
+    dateOfDiagnosis?: string | null,
+    absoluteDateFormat?: boolean
+) {
+    let eventDate: Date | null = null;
     let negative = dayCount < 0;
-    dayCount = Math.abs(dayCount);
+    // dayCount = Math.abs(dayCount);
 
-    let years, months, days;
+    let years: number, months: number, days: number;
 
-    years = Math.floor(dayCount / 365);
-    months = Math.floor((dayCount - years * 365) / 30);
-    days = Math.floor(dayCount - years * 365 - months * 30);
+    if (dateOfDiagnosis) {
+        const startDate: Date | null = parseFlexibleDate(dateOfDiagnosis);
+        eventDate = startDate ? getDateNDaysAfter(startDate, dayCount) : null;
+
+        if (startDate && eventDate) {
+            const start = eventDate > startDate ? startDate : eventDate;
+            const end = start === eventDate ? startDate : eventDate;
+            years = end.getFullYear() - start.getFullYear();
+            months = end.getMonth() - start.getMonth();
+            days = end.getDate() - start.getDate();
+
+            // Adjust for negative months or days
+            if (days < 0) {
+                months--;
+                days += new Date(
+                    start.getFullYear(),
+                    start.getMonth() + 1,
+                    0
+                ).getDate();
+            }
+
+            if (months < 0) {
+                years--;
+                months += 12;
+            }
+        } else {
+            // use heuristical method
+            [years, months, days] = calculateYearsMonthsDaysFromDaysNumber(
+                dayCount
+            );
+        }
+    } else {
+        // use heuristical method
+        [years, months, days] = calculateYearsMonthsDaysFromDaysNumber(
+            dayCount
+        );
+    }
 
     let arr = [];
 
@@ -218,6 +277,15 @@ export function formatDate(dayCount: number) {
         arr.push(`${days} day${days === 1 ? '' : 's'}`);
 
     const formattedDate = arr.join(', ');
+    if (eventDate && absoluteDateFormat) {
+        return (
+            eventDate.getDate() +
+            '/' +
+            (eventDate.getMonth() + 1) +
+            '/' +
+            eventDate.getFullYear()
+        );
+    }
     return `${negative ? '-' : ''}${formattedDate}`;
 }
 

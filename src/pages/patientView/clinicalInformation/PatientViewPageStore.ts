@@ -3507,4 +3507,13 @@ export class PatientViewPageStore {
         default: {},
         onError: () => {},
     });
+
+    readonly allClinicalEvents = remoteData({
+        invoke: async () => {
+            return await internalClient.getAllClinicalEventsInStudyUsingGET({
+                studyId: this.studyId,
+            });
+        },
+        default: [],
+    });
 }

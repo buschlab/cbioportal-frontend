@@ -3,7 +3,7 @@ import React, { useCallback, useState } from 'react';
 import { TimelineStore } from './TimelineStore';
 import _ from 'lodash';
 import { observer } from 'mobx-react';
-import { Portal } from 'react-overlays/lib';
+import Portal from 'react-overlays/lib/Portal';
 import { Popover } from 'react-bootstrap';
 import { flattenTracks, sortNestedTracks } from './lib/helpers';
 import CustomTrack, { CustomTrackSpecification } from './CustomTrack';

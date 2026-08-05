@@ -36,6 +36,8 @@ import {
 import ReactMarkdown from 'react-markdown';
 import { useLocalObservable, useLocalStore } from 'mobx-react-lite';
 
+import { useDateFormat } from './lib/DateFormatContext';
+
 export interface ITimelineTrackProps {
     trackData: TimelineTrackSpecification;
     limit: number;
@@ -466,7 +468,9 @@ export const EventTooltipContent: React.FunctionComponent<{
 }> = function({ event, trackConfig }) {
     let attributes = event.event.attributes.filter(attr => {
         return (
-            attr.key !== COLOR_ATTRIBUTE_KEY && attr.key !== SHAPE_ATTRIBUTE_KEY
+            attr.key !== COLOR_ATTRIBUTE_KEY &&
+            attr.key !== SHAPE_ATTRIBUTE_KEY &&
+            attr.key !== 'DATE_ISO'
         );
     });
 
@@ -478,6 +482,9 @@ export const EventTooltipContent: React.FunctionComponent<{
             trackConfig.attributeOrder
         );
     }
+
+    // Use Context for date format and day of diagnosis
+    const { startDate } = useDateFormat();
 
     return (
         <div>
@@ -529,8 +536,24 @@ export const EventTooltipContent: React.FunctionComponent<{
                                 : 'DATE'
                         }`}</td>
                         <td className={'nowrap'}>
+                            {/* 1. Relative Date (Always) */}
                             {formatDate(
-                                event.event.startNumberOfDaysSinceDiagnosis
+                                event.event.startNumberOfDaysSinceDiagnosis,
+                                startDate,
+                                false
+                            )}
+                            {/* 2. Absolute Date (If start date exists) */}
+                            {startDate && (
+                                <>
+                                    {' ('}
+                                    {formatDate(
+                                        event.event
+                                            .startNumberOfDaysSinceDiagnosis,
+                                        startDate,
+                                        true
+                                    )}
+                                    {')'}
+                                </>
                             )}
                         </td>
                     </tr>
@@ -538,8 +561,24 @@ export const EventTooltipContent: React.FunctionComponent<{
                         <tr>
                             <td>END DATE</td>
                             <td className={'nowrap'}>
+                                {/* 1. Relative Date (Always) */}
                                 {formatDate(
-                                    event.event.endNumberOfDaysSinceDiagnosis
+                                    event.event.endNumberOfDaysSinceDiagnosis,
+                                    startDate,
+                                    false
+                                )}
+                                {/* 2. Absolute Date (If start date exists) */}
+                                {startDate && (
+                                    <>
+                                        {' ('}
+                                        {formatDate(
+                                            event.event
+                                                .endNumberOfDaysSinceDiagnosis,
+                                            startDate,
+                                            true
+                                        )}
+                                        {')'}
+                                    </>
                                 )}
                             </td>
                         </tr>

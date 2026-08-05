@@ -38,6 +38,12 @@ import FeatureInstruction from 'shared/FeatureInstruction/FeatureInstruction';
 import { HelpWidget } from 'shared/components/HelpWidget/HelpWidget';
 import FollowUpTable from './therapyRecommendation/FollowUpTable';
 import MutationTableWrapper from './mutation/MutationTableWrapper';
+import Proms from './proms/Proms';
+import { doClinicalEventsHavePromData } from './proms/utils/PromChartHelperFunctions';
+import {
+    QUESTIONNAIRE_NAME as QUESTIONNAIRE_NAME_EQ_5D_5L,
+    PROM_EVENT_TYPE,
+} from './proms/utils/EQ-5D-5LChartMetadata';
 import { PatientViewPageInner } from 'pages/patientView/PatientViewPage';
 import { Else, If } from 'react-if';
 
@@ -55,6 +61,7 @@ export enum PatientViewPageTabs {
     Mtb = 'mtb',
     FollowUp = 'followUp',
     ClinicalTrialsGov = 'clinicaltrialsGov',
+    Proms = 'proms',
 }
 
 export const PatientViewResourceTabPrefix = 'openResource_';
@@ -855,6 +862,31 @@ export function tabs(
                             .samplesNotProfiledForMutationalSignatures
                     }
                     onSampleChange={pageComponent.onSampleIdChange}
+                />
+            </MSKTab>
+        );
+
+    pageComponent.patientViewPageStore.clinicalEvents.isComplete &&
+        pageComponent.patientViewPageStore.clinicalEvents.result.length > 0 &&
+        doClinicalEventsHavePromData(
+            pageComponent.patientViewPageStore.clinicalEvents.result,
+            [QUESTIONNAIRE_NAME_EQ_5D_5L, PROM_EVENT_TYPE]
+        ) &&
+        tabs.push(
+            <MSKTab
+                key={45}
+                id={PatientViewPageTabs.Proms}
+                linkText="PROMs"
+                unmountOnHide={false}
+            >
+                <Proms
+                    patientViewPageStore={pageComponent.patientViewPageStore}
+                    sampleManager={sampleManager}
+                    dataStore={pageComponent.patientViewMutationDataStore}
+                    allClinicalEventsInStudy={
+                        pageComponent.patientViewPageStore.allClinicalEvents
+                            .result
+                    }
                 />
             </MSKTab>
         );

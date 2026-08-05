@@ -13,3 +13,5 @@ export * from './configureTracks';
 export * from './TimelineTrack';
 
 export { renderStack } from './svg/renderStack';
+
+export { useDateFormat } from './lib/DateFormatContext';

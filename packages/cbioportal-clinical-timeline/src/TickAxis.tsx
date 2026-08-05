@@ -4,14 +4,16 @@ import { TimelineStore } from './TimelineStore';
 import { observer } from 'mobx-react';
 import _ from 'lodash';
 
+import { useDateFormat } from './lib/DateFormatContext';
+
 interface ITickAxisProps {
     store: TimelineStore;
     width: number;
 }
 
-export const TICK_AXIS_HEIGHT = 20;
+export const TICK_AXIS_HEIGHT = 36;
 const TICK_LABEL_STYLE: any = {
-    fontSize: 9,
+    fontSize: 9.5,
     fontFamily: 'Arial',
     textAnchor: 'middle',
 };
@@ -60,6 +62,13 @@ const TickAxis: React.FunctionComponent<ITickAxisProps> = observer(function({
     store,
     width,
 }: ITickAxisProps) {
+    // Helper to determine text alignment based on position
+    const getTextAnchor = (pixelLeft: number) => {
+        if (pixelLeft < 20) return 'start'; // Too close to left edge -> align left
+        if (pixelLeft > width - 20) return 'end'; // Too close to right edge -> align right
+        return 'middle'; // Default
+    };
+
     return (
         <>
             <g>
@@ -71,6 +80,11 @@ const TickAxis: React.FunctionComponent<ITickAxisProps> = observer(function({
                 />
                 {store.ticks.map((tick: TimelineTick, index: number) => {
                     let content: JSX.Element | null = null;
+                    // Use Context for date format and day of diagnosis
+                    const { startDate } = useDateFormat();
+                    const startDateTimeline = startDate
+                        ? new Date(startDate)
+                        : null;
 
                     let startPoint;
                     if (tick === store.firstTick) {
@@ -96,38 +110,85 @@ const TickAxis: React.FunctionComponent<ITickAxisProps> = observer(function({
                                 ? 'm'
                                 : 'y';
 
-                        let majorLabel: string = '';
-
+                        let relativeLabel: string = '';
                         if (count < 0) {
-                            majorLabel = `${count}${unit}`;
+                            relativeLabel = `${count}${unit}`;
+                        } else if (count === 0) {
+                            relativeLabel = '0';
+                        } else {
+                            relativeLabel = `${count}${unit}`;
                         }
 
-                        if (count === 0) {
-                            majorLabel = '0';
+                        let absoluteLabel: string = '';
+
+                        // If startDateTimeline exists, we calculate the absolute label.
+                        if (startDateTimeline !== null) {
+                            if (count === 0) {
+                                absoluteLabel =
+                                    startDateTimeline.getDate() +
+                                    '/' +
+                                    (
+                                        startDateTimeline.getMonth() + 1
+                                    ).toString() +
+                                    '/' +
+                                    (
+                                        startDateTimeline.getFullYear() + count
+                                    ).toString();
+                            } else {
+                                absoluteLabel =
+                                    (
+                                        startDateTimeline.getMonth() + 1
+                                    ).toString() +
+                                    '/' +
+                                    (
+                                        startDateTimeline.getFullYear() + count
+                                    ).toString();
+                            }
                         }
 
-                        if (count > 0) {
-                            majorLabel = `${count}${unit}`;
-                        }
+                        // Determine dynamic text anchor
+                        const anchor = majorTickPosition
+                            ? getTextAnchor(majorTickPosition.pixelLeft)
+                            : 'middle';
 
+                        // Render both labels with relative label first (top)
+                        // and absolute date below.
                         content = (
                             <>
-                                <text
-                                    dy={'1em'}
-                                    style={{
-                                        fill: '#333',
-                                        ...TICK_LABEL_STYLE,
-                                    }}
-                                >
-                                    {majorLabel}
-                                </text>
-                                <rect
-                                    height={MAJOR_TICK_HEIGHT}
-                                    width={1}
+                                <g
                                     transform={`translate(0 ${TICK_AXIS_HEIGHT -
-                                        MAJOR_TICK_HEIGHT})`}
-                                    fill={'#aaa'}
-                                />
+                                        1})`}
+                                >
+                                    <text
+                                        y={-8}
+                                        style={{
+                                            fill: '#666',
+                                            fontWeight: 'normal',
+                                            ...TICK_LABEL_STYLE,
+                                            textAnchor: anchor,
+                                        }}
+                                    >
+                                        {absoluteLabel}
+                                    </text>
+                                    <text
+                                        y={-18}
+                                        style={{
+                                            fill: '#333',
+                                            fontWeight: 600,
+                                            ...TICK_LABEL_STYLE,
+                                            textAnchor: anchor,
+                                        }}
+                                    >
+                                        {relativeLabel}
+                                    </text>
+                                    <rect
+                                        x={0}
+                                        y={-MAJOR_TICK_HEIGHT}
+                                        height={MAJOR_TICK_HEIGHT}
+                                        width={1}
+                                        fill={'#aaa'}
+                                    />
+                                </g>
                             </>
                         );
 
@@ -143,8 +204,10 @@ const TickAxis: React.FunctionComponent<ITickAxisProps> = observer(function({
                                     ? `translate(${position.pixelLeft} 0)`
                                     : undefined;
 
-                                let minorLabel = '';
                                 let showLabel = false;
+                                let relativeMinorLabel = '';
+                                let absoluteMinorLabel = '';
+
                                 if (store.tickPixelWidth > 150) {
                                     if (i % 4 === 0) {
                                         // only odd
@@ -157,72 +220,98 @@ const TickAxis: React.FunctionComponent<ITickAxisProps> = observer(function({
 
                                 if (showLabel) {
                                     let minorCount = i;
+
                                     if (count < 0) {
                                         minorCount = 12 - i;
-                                        majorLabel =
+                                        const prevMajor =
                                             count + 1 === 0
                                                 ? ''
                                                 : `${count + 1}${unit}`;
-                                        minorLabel =
+                                        relativeMinorLabel =
                                             count === -1
                                                 ? `-${minorCount}m`
-                                                : `${majorLabel} ${minorCount}m`;
+                                                : `${prevMajor} ${minorCount}m`;
                                     } else {
-                                        minorLabel =
+                                        relativeMinorLabel =
                                             count === 0
                                                 ? `${minorCount}m`
-                                                : `${majorLabel} ${minorCount}m`;
+                                                : `${relativeLabel} ${minorCount}m`;
+                                    }
+
+                                    // Always calculating if startDateTimeline exists.
+                                    if (startDateTimeline !== null) {
+                                        let countForAbsoluteDate = count;
+                                        const minorCountAbs = i;
+                                        const month =
+                                            (startDateTimeline.getMonth() +
+                                                1 +
+                                                minorCountAbs) %
+                                            12;
+                                        const monthValue =
+                                            month === 0 ? 12 : month;
+                                        const startDateMonth =
+                                            startDateTimeline.getMonth() + 1;
+
+                                        if (monthValue < startDateMonth) {
+                                            countForAbsoluteDate = count + 1;
+                                        }
+
+                                        absoluteMinorLabel =
+                                            monthValue +
+                                            '/' +
+                                            (
+                                                startDateTimeline.getFullYear() +
+                                                countForAbsoluteDate
+                                            ).toString();
                                     }
                                 }
 
-                                if (transform) {
+                                if (transform && position) {
+                                    const minorAnchor = getTextAnchor(
+                                        position.pixelLeft
+                                    );
+
                                     minorTicks.push(
                                         <g transform={transform}>
-                                            <text
-                                                dy={'1.5em'}
-                                                style={{
-                                                    fill: '#aaa',
-                                                    ...TICK_LABEL_STYLE,
-                                                }}
-                                            >
-                                                {minorLabel}
-                                            </text>
-                                            <rect
-                                                height={MINOR_TICK_HEIGHT}
-                                                width={1}
+                                            <g
                                                 transform={`translate(0 ${TICK_AXIS_HEIGHT -
-                                                    MINOR_TICK_HEIGHT})`}
-                                                fill={'#aaa'}
-                                            />
+                                                    1})`}
+                                            >
+                                                <text
+                                                    y={-8}
+                                                    style={{
+                                                        fill: '#666',
+                                                        ...TICK_LABEL_STYLE,
+                                                        textAnchor: minorAnchor,
+                                                    }}
+                                                >
+                                                    {absoluteMinorLabel}
+                                                </text>
+                                                <text
+                                                    y={-18}
+                                                    style={{
+                                                        fill: '#333',
+                                                        fontWeight: 600,
+                                                        ...TICK_LABEL_STYLE,
+                                                        textAnchor: minorAnchor,
+                                                    }}
+                                                >
+                                                    {relativeMinorLabel}
+                                                </text>
+                                                <rect
+                                                    x={0}
+                                                    y={-MINOR_TICK_HEIGHT}
+                                                    height={MINOR_TICK_HEIGHT}
+                                                    width={1}
+                                                    fill={'#aaa'}
+                                                />
+                                            </g>
                                         </g>
                                     );
                                 }
                             }
                         }
                     }
-
-                    // DAY TICKS
-                    // if (store.tickPixelWidth > 2000) {
-                    //     const dayTickWidth = TickIntervalEnum.MONTH/30;
-                    //     for (let i = 0; i <= 365; i++) {
-                    //
-                    //         if (i % 30 !== 0) {
-                    //             const position = majorTickPosition && store.getPosition(
-                    //                 {start: startPoint + dayTickWidth * i},
-                    //                 store.trimmedLimit
-                    //             );
-                    //             if (position) {
-                    //                 minorTicks.push(
-                    //                     <div className={'tl-daytick'} style={{left: position.left}}>
-                    //                         <div className={'tl-tickline'}></div>
-                    //                     </div>
-                    //                 )
-                    //             }
-                    //         }
-                    //     }
-                    //
-                    //
-                    // }
 
                     const rightAfterTrim =
                         index > 0 && store.ticks[index - 1].isTrim;

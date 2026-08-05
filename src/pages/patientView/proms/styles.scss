@@ -1,0 +1,155 @@
+$break-point: 1529px;
+$icon-padding: 10px;
+$container-padding: 10px;
+
+.proms .questionnaire-title {
+    color: $text-color;
+    font-size: 18px;
+    margin-bottom: 2 * $container-padding;
+    margin-top: $container-padding;
+    font-family: inherit;
+    font-weight: 500;
+    line-height: 1.1;
+}
+
+.proms .proms-container {
+    border-radius: 2px;
+    box-shadow: 0 2px 2px 0 rgba(0, 0, 0, 0.14),
+        0 3px 1px -2px rgba(0, 0, 0, 0.12), 0 1px 5px 0 rgba(0, 0, 0, 0.2);
+    padding: $container-padding;
+    margin-bottom: 30px;
+}
+
+.proms .proms-container-small {
+    max-width: 300px;
+    min-width: 300px;
+    @extend .proms-container;
+}
+
+.proms .proms-container-large {
+    max-width: 1205px;
+    min-width: 860px;
+    margin-right: auto;
+    @extend .proms-container;
+}
+
+.proms .proms-container-large::-webkit-scrollbar {
+    height: 8px;
+}
+
+.proms .proms-container-large::-webkit-scrollbar-thumb {
+    background: #aaa;
+    border-radius: 4px;
+}
+
+.proms .proms-container-large::-webkit-scrollbar-track {
+    background: #f1f1f1;
+}
+
+.proms .flex-width-container {
+    flex-grow: 1; /* Allow the heading to take available space */
+}
+
+@mixin container-icon-padding($pad-left: 0, $pad-right: 0) {
+    padding-left: $pad-left;
+    padding-right: $pad-right;
+}
+
+.proms .chart-heading-container {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+}
+
+.proms .chart-heading-container-left {
+    @include container-icon-padding($pad-right: $icon-padding);
+    @extend .chart-heading-container;
+}
+
+.proms .chart-heading-container-center {
+    @include container-icon-padding(
+        $pad-left: $icon-padding,
+        $pad-right: $icon-padding
+    );
+    @extend .chart-heading-container;
+}
+
+.proms .chart-heading {
+    color: $text-color;
+    font-size: 18px;
+    margin-top: 0.5 * $container-padding;
+    margin-bottom: $container-padding;
+    font-family: inherit;
+}
+
+.proms .chart-heading__capitalLettersCentered {
+    text-align: center;
+    text-transform: uppercase;
+    margin-bottom: 0;
+    @extend .chart-heading;
+}
+
+.proms .icon-wrapper {
+    display: flex;
+    font-size: large;
+    justify-content: flex-end; /* Ensure icon stays on the right */
+    margin-top: 0.5 * $container-padding;
+    margin-bottom: $container-padding;
+}
+
+.proms .icon-wrapper-no-bot-margin {
+    margin-bottom: 0;
+    @extend .icon-wrapper;
+}
+
+.proms .icon-wrapper .fa,
+.proms .icon-wrapper-no-bot-margin .fa {
+    font-size: inherit;
+    cursor: pointer;
+}
+
+.proms .row.prom-grid {
+    clear: both;
+    *zoom: 1;
+}
+
+.proms .row.prom-grid:before,
+.proms .row.prom-grid:after {
+    content: ' ';
+    display: table;
+}
+
+.proms .row.prom-grid:after {
+    clear: both;
+}
+
+@media (max-width: $break-point) {
+    .proms .row.prom-grid div[class*='col-md-12'] {
+        width: 100%;
+        float: none;
+        margin-left: 0;
+    }
+}
+
+@media (min-width: calc($break-point + 1px)) {
+    .proms .row.prom-grid div[class*='col-lg-3'] {
+        width: 25%;
+        float: left;
+    }
+    .proms .row.prom-grid div[class*='col-lg-9'] {
+        width: 75%;
+        float: left;
+    }
+}
+
+.proms .button-margin {
+    margin-bottom: 40px;
+    margin-top: 40px;
+}
+
+.proms .text-unavailable-data {
+    display: flex;
+    padding-top: 40px;
+    text-align: center;
+}
