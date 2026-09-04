@@ -5,6 +5,7 @@ import {
     NumericGeneMolecularData,
     StructuralVariant,
 } from 'cbioportal-ts-api-client';
+import { clinicalTrial } from './LocalCT';
 
 // Helper function to get CNV type
 export declare type NumericGeneMolecularDataWithStatus = NumericGeneMolecularData & {
@@ -144,4 +145,23 @@ export interface FinalResultRowClinicalTraitsAndBiomarkers {
     trialURL: string;
     clinicalParameterName: string;
     clinicalParameterValue: string;
+}
+
+export interface FilterSet {
+    hugoFilter: string[];
+    OQLFilterMutation: OQLFilter[];
+    OQLFilterCNA: OQLFilter[];
+    OQLFilterSV: OQLFilter[];
+    clinicalFilter: ClinicalFilter[];
+    ageFilter: AgeFilter[];
+}
+
+export interface TrialFilters extends FilterSet {
+    trial: clinicalTrial;
+}
+
+export interface LocalCTBundle {
+    trials: clinicalTrial[];
+    filtersByTrial: TrialFilters[];
+    aggregateFilters: FilterSet;
 }

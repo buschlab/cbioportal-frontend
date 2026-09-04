@@ -7,6 +7,9 @@ import {
     NumericGeneMolecularDataWithStatus,
     ClinicalFilter,
     ClinicalMatch,
+    LocalCTBundle,
+    TrialFilters,
+    FilterSet,
 } from './LocalCTInterfaces';
 import { useEffect, useState } from 'react';
 import {
@@ -19,7 +22,7 @@ import {
     StructuralVariant,
 } from 'cbioportal-ts-api-client';
 import { StudyViewPageStore } from '../../StudyViewPageStore';
-import { clinicalTrial } from 'cbioportal-utils/src/model/LocalCT';
+import { clinicalTrial } from './LocalCT';
 import {
     getCnaData,
     getMutationData,
@@ -262,10 +265,7 @@ export function getFiltersFromTrials(trials: clinicalTrial[] | null) {
                     cnaType: last,
                 };
                 cnaMap.set(makeKey(f), f);
-            } else if (
-                /(FUSION|TRANSLOCATION|SV|REARRANGEMENT)/i.test(last) ||
-                parts.length >= 3
-            ) {
+            } else if (/(FUSION|TRANSLOCATION|SV|REARRANGEMENT)/i.test(last)) {
                 // treat multi-part tokens or explicit fusion markers as structural variants
 
                 const f: OQLFilter =
@@ -692,4 +692,50 @@ export async function getPatientName(
     }
 
     return undefined;
+}
+
+export function parseTrialFilters(trial: clinicalTrial): TrialFilters {
+    return {
+        trial,
+        ...getFiltersFromTrials([trial]),
+    };
+}
+
+export function mergeTrialFilters(filtersByTrial: TrialFilters[]): FilterSet {
+    const hugoSymbols = new Set<string>();
+
+    const OQLFilterMutation: OQLFilter[] = [];
+    const OQLFilterCNA: OQLFilter[] = [];
+    const OQLFilterSV: OQLFilter[] = [];
+    const clinicalFilter: ClinicalFilter[] = [];
+    const ageFilter: AgeFilter[] = [];
+
+    filtersByTrial.forEach(filters => {
+        filters.hugoFilter.forEach(symbol => hugoSymbols.add(symbol));
+
+        OQLFilterMutation.push(...filters.OQLFilterMutation);
+        OQLFilterCNA.push(...filters.OQLFilterCNA);
+        OQLFilterSV.push(...filters.OQLFilterSV);
+        clinicalFilter.push(...filters.clinicalFilter);
+        ageFilter.push(...filters.ageFilter);
+    });
+
+    return {
+        hugoFilter: Array.from(hugoSymbols),
+        OQLFilterMutation,
+        OQLFilterCNA,
+        OQLFilterSV,
+        clinicalFilter,
+        ageFilter,
+    };
+}
+
+export function buildLocalCTBundle(trials: clinicalTrial[]): LocalCTBundle {
+    const filtersByTrial = trials.map(parseTrialFilters);
+
+    return {
+        trials,
+        filtersByTrial,
+        aggregateFilters: mergeTrialFilters(filtersByTrial),
+    };
 }

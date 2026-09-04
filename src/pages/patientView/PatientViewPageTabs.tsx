@@ -913,6 +913,13 @@ export function tabs(
                     pageComponent.patientViewPageStore
                         .mergedMutationDataFilteredByGene
                 }
+                copyNumberAlterations={
+                    pageComponent.patientViewPageStore.mergedDiscreteCNAData
+                }
+                structuralVariants={
+                    pageComponent.patientViewPageStore.structuralVariantData
+                        .result ?? []
+                }
             />
         </MSKTab>
     );

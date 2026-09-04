@@ -2,18 +2,22 @@ import * as React from 'react';
 import { useState, useEffect, useMemo } from 'react';
 import { observer } from 'mobx-react';
 import { ClinicalAttribute, ClinicalData } from 'cbioportal-ts-api-client';
-import { getLocalCT, clinicalTrial } from 'cbioportal-utils/src/model/LocalCT';
+import {
+    clinicalTrial,
+    getLocalCTBundle,
+} from './LocalClinicalTrialsHelperFunctions/LocalCT';
 import { StudyViewPageStore } from '../StudyViewPageStore';
 import {
     OQLFilter,
     ClinicalFilter,
     FinalResultRow,
     FinalResultRowClinicalTraitsAndBiomarkers,
+    LocalCTBundle,
+    AgeFilter,
 } from './LocalClinicalTrialsHelperFunctions/LocalCTInterfaces';
 import {
     ageEligibilityNotes,
     alterationLabel,
-    getFiltersFromTrials,
     useMutationsPerPatient,
     buildAlterations,
     alterationsByInclusion,
@@ -34,7 +38,7 @@ interface Props {
 
 // The major component to control the local clinical trials matching tab. It fetches the local clinical trial data, extracts molecular alteration data for patients in the current study, applies the trial inclusion and exclusion criteria to identify matches, and renders the results in a table.
 const LocalClinicalTrialsMatch: React.FC<Props> = observer(({ store }) => {
-    const [trials, setTrials] = useState<clinicalTrial[] | null>(null);
+    // const [trials, setTrials] = useState<clinicalTrial[] | null>(null);
     const [ageByPatient, setAgeByPatient] = useState<{
         [patientId: string]: string;
     }>({});
@@ -52,18 +56,16 @@ const LocalClinicalTrialsMatch: React.FC<Props> = observer(({ store }) => {
     const [clinicalDataForFiltering, setClinicalDataForFiltering] = useState<
         ClinicalData[]
     >([]);
+    const [bundle, setBundle] = useState<LocalCTBundle | null>(null);
+    const [loadError, setLoadError] = useState<Error | null>(null);
 
     useEffect(() => {
-        const loadTrials = async () => {
-            try {
-                const data = await getLocalCT();
-                setTrials(data);
-            } catch (err) {
-                console.error('Error loading clinical trials:', err);
-            }
-        };
-        loadTrials();
+        getLocalCTBundle()
+            .then(setBundle)
+            .catch(setLoadError);
     }, []);
+
+    const trials = bundle?.trials ?? null;
 
     const {
         hugoFilter,
@@ -72,18 +74,14 @@ const LocalClinicalTrialsMatch: React.FC<Props> = observer(({ store }) => {
         OQLFilterSV,
         clinicalFilter,
         ageFilter,
-    } = useMemo(() => {
-        return (
-            getFiltersFromTrials(trials) || {
-                hugoFilter: [],
-                OQLFilterMutation: [],
-                OQLFilterCNA: [],
-                OQLFilterSV: [],
-                clinicalFilter: [],
-                ageFilter: [],
-            }
-        );
-    }, [trials]);
+    } = bundle?.aggregateFilters ?? {
+        hugoFilter: [] as string[],
+        OQLFilterMutation: [] as OQLFilter[],
+        OQLFilterCNA: [] as OQLFilter[],
+        OQLFilterSV: [] as OQLFilter[],
+        clinicalFilter: [] as ClinicalFilter[],
+        ageFilter: [] as AgeFilter[],
+    };
 
     const hugoSet = useMemo(() => new Set(hugoFilter), [hugoFilter]);
     const hugoFilterKey = useMemo(() => hugoFilter.join(','), [hugoFilter]);

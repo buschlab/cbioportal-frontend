@@ -1,7 +1,11 @@
 import * as React from 'react';
 import { observer } from 'mobx-react';
 import { observable, action, computed, makeObservable } from 'mobx';
-import { Mutation } from 'cbioportal-ts-api-client';
+import {
+    Mutation,
+    DiscreteCopyNumberData,
+    StructuralVariant,
+} from 'cbioportal-ts-api-client';
 import LoadingIndicator from 'shared/components/loadingIndicator/LoadingIndicator';
 import LazyMobXTable from 'shared/components/lazyMobXTable/LazyMobXTable';
 import { CollapsibleTreeSelect } from './CollapsibleTreeSelect';
@@ -20,6 +24,8 @@ import {
 
 type QuickqueckTabProps = {
     mutations?: Mutation[][];
+    copyNumberAlterations?: DiscreteCopyNumberData[][];
+    structuralVariants?: StructuralVariant[];
 };
 
 @observer
@@ -35,6 +41,13 @@ export default class QuickqueckTab extends React.Component<QuickqueckTabProps> {
     @observable private patientAge: number | null = null;
     @observable private mutationQuery = '';
     @observable private mutationDropdownOpen = false;
+
+    @observable filterByPatientMutations = true;
+
+    @action.bound
+    togglePatientMutationFilter(): void {
+        this.filterByPatientMutations = !this.filterByPatientMutations;
+    }
 
     constructor(props: QuickqueckTabProps) {
         super(props);
@@ -63,6 +76,9 @@ export default class QuickqueckTab extends React.Component<QuickqueckTabProps> {
         const { ageRangeMap } = this.data;
 
         const expandedEntityIds = this.expandedSelectedEntityIds;
+        const geneList = this.genomicSuggestions.map(suggestion =>
+            suggestion.trim()
+        );
 
         return this.data.studies.filter(s => {
             if (
@@ -105,6 +121,15 @@ export default class QuickqueckTab extends React.Component<QuickqueckTabProps> {
                         return false;
                     }
                 }
+            }
+
+            const criteria = s.criteria ?? '';
+            if (
+                this.filterByPatientMutations &&
+                geneList.length > 0 &&
+                !geneList.some(suggestion => criteria.includes(suggestion))
+            ) {
+                return false;
             }
 
             if (this.mutationQuery.trim()) {
@@ -214,22 +239,56 @@ export default class QuickqueckTab extends React.Component<QuickqueckTabProps> {
     }
 
     /** Mutation suggestions are derived from patient mutations in gene and protein-change form. */
-    @computed get mutationSuggestions(): string[] {
-        const { mutations } = this.props;
-        if (!mutations || mutations.length === 0) return [];
+    @computed get genomicSuggestions(): string[] {
+        const {
+            mutations,
+            copyNumberAlterations,
+            structuralVariants,
+        } = this.props;
 
         const suggestions = new Set<string>();
-        for (const group of mutations) {
-            for (const m of group) {
-                const gene = m.gene?.hugoGeneSymbol;
-                if (gene) {
-                    suggestions.add(gene);
-                    if (m.proteinChange) {
-                        suggestions.add(`${gene} ${m.proteinChange}`);
-                    }
+
+        // Mutations
+        for (const group of mutations ?? []) {
+            for (const mutation of group) {
+                const gene = mutation.gene?.hugoGeneSymbol;
+
+                if (!gene) continue;
+
+                suggestions.add(gene);
+
+                if (mutation.proteinChange) {
+                    suggestions.add(`${gene} ${mutation.proteinChange}`);
                 }
             }
         }
+
+        // Copy-number alterations
+        for (const cnaGroup of copyNumberAlterations ?? []) {
+            for (const cna of cnaGroup) {
+                console.log({
+                    gene: cna.gene?.hugoGeneSymbol,
+                    alteration: cna.alteration,
+                    patientId: cna.patientId,
+                    sampleId: cna.sampleId,
+                });
+                const gene = cna.gene?.hugoGeneSymbol;
+
+                if (gene && (cna.alteration === 2 || cna.alteration === -2)) {
+                    suggestions.add(gene);
+                }
+            }
+        }
+
+        // Structural variants: beide Fusions-/Breakpoint-Partner
+        for (const sv of structuralVariants ?? []) {
+            for (const gene of [sv.site1HugoSymbol, sv.site2HugoSymbol]) {
+                if (gene) {
+                    suggestions.add(gene);
+                }
+            }
+        }
+
         return Array.from(suggestions).sort();
     }
 
@@ -278,6 +337,7 @@ export default class QuickqueckTab extends React.Component<QuickqueckTabProps> {
         this.selectedPhases = new Set();
         this.selectedTherapyLines = new Set();
         this.patientAge = null;
+        this.filterByPatientMutations = false;
         this.mutationQuery = '';
     }
 
@@ -452,6 +512,26 @@ export default class QuickqueckTab extends React.Component<QuickqueckTabProps> {
                     />
                 </div>
                 {this.renderMutationFilter()}
+
+                <div
+                    style={{
+                        display: 'flex',
+                        flexDirection: 'column',
+                        justifyContent: 'flex-end',
+                        gap: '4px',
+                    }}
+                >
+                    <button
+                        type="button"
+                        className="btn btn-sm btn-default"
+                        onClick={this.togglePatientMutationFilter}
+                        disabled={this.genomicSuggestions.length === 0}
+                    >
+                        {this.filterByPatientMutations
+                            ? 'Show all trials'
+                            : 'Filter by patient mutations'}
+                    </button>
+                </div>
                 <div
                     style={{
                         display: 'flex',
@@ -465,13 +545,13 @@ export default class QuickqueckTab extends React.Component<QuickqueckTabProps> {
                             className="btn btn-sm btn-default"
                             onClick={this.clearAllFilters}
                         >
-                            Clear all
+                            Clear all filters
                         </button>
                     )}
-                    <small style={{ color: '#666', whiteSpace: 'nowrap' }}>
-                        {shown} / {total} studies
-                    </small>
                 </div>
+                <small style={{ color: '#666', whiteSpace: 'nowrap' }}>
+                    {shown} / {total} studies
+                </small>
             </div>
         );
     }
@@ -526,7 +606,7 @@ export default class QuickqueckTab extends React.Component<QuickqueckTabProps> {
                             borderRadius: 4,
                         }}
                     />
-                    {this.mutationSuggestions.length > 0 && (
+                    {this.genomicSuggestions.length > 0 && (
                         <button
                             onClick={action(() => {
                                 this.mutationDropdownOpen = !this
@@ -546,13 +626,13 @@ export default class QuickqueckTab extends React.Component<QuickqueckTabProps> {
                     )}
                 </div>
                 {this.mutationDropdownOpen &&
-                    this.mutationSuggestions.length > 0 &&
-                    this.renderMutationSuggestions()}
+                    this.genomicSuggestions.length > 0 &&
+                    this.renderGenomicSuggestions()}
             </div>
         );
     }
 
-    private renderMutationSuggestions() {
+    private renderGenomicSuggestions() {
         return (
             <>
                 <div
@@ -581,7 +661,7 @@ export default class QuickqueckTab extends React.Component<QuickqueckTabProps> {
                         marginTop: 2,
                     }}
                 >
-                    {this.mutationSuggestions
+                    {this.genomicSuggestions
                         .filter(
                             s =>
                                 !this.mutationQuery ||
@@ -658,7 +738,11 @@ export default class QuickqueckTab extends React.Component<QuickqueckTabProps> {
                 >
                     Clinical Trials Search via QuickQueck. This search is based
                     on cached results from{' '}
-                    {new Date(this.data.lastUpdated).toLocaleDateString()}.
+                    {new Date(this.data.lastUpdated).toLocaleDateString()}.{' '}
+                    <br />
+                    Per default, the list is pre-filtered by the patient's
+                    altered genes. Press the button "Show all trials" to remove
+                    this automatic filter.
                 </div>
                 {this.renderFilterBar()}
                 <LazyMobXTable
