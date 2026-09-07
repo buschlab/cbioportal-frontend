@@ -19,6 +19,7 @@ import {
     MolecularProfile,
     NumericGeneMolecularData,
     Sample,
+    DiscreteCopyNumberData,
     StructuralVariant,
 } from 'cbioportal-ts-api-client';
 import { StudyViewPageStore } from '../../StudyViewPageStore';
@@ -738,4 +739,63 @@ export function buildLocalCTBundle(trials: clinicalTrial[]): LocalCTBundle {
         filtersByTrial,
         aggregateFilters: mergeTrialFilters(filtersByTrial),
     };
+}
+
+export function getMatchingInclusionMutationFilters(
+    mutations: Mutation[],
+    filters: OQLFilter[]
+): OQLFilter[] {
+    const mutationAlterations: Alteration[] = mutations.map(mutation => ({
+        gene: mutation.gene,
+        patientId: mutation.patientId,
+        sampleId: mutation.sampleId,
+        alterationType: 'Mutation',
+        proteinChange: mutation.proteinChange,
+        mutationType: mutation.mutationType,
+    }));
+
+    return filters.filter(
+        filter =>
+            filter.criterionType === 'incl' &&
+            mutationAlterations.some(alteration =>
+                alterationMatcher(alteration, filter)
+            )
+    );
+}
+
+export function getMatchingInclusionCnaFilters(
+    cnaEntries: DiscreteCopyNumberData[],
+    filters: OQLFilter[]
+): OQLFilter[] {
+    return filters.filter(
+        filter =>
+            filter.criterionType === 'incl' &&
+            cnaEntries.some(cna =>
+                alterationMatcher(
+                    {
+                        gene: cna.gene,
+                        patientId: cna.patientId,
+                        sampleId: cna.sampleId,
+                        alterationType: 'Copy Number Alteration',
+                        cna: cna.alteration,
+                    },
+                    filter
+                )
+            )
+    );
+}
+
+export function getMatchingInclusionSvFilters(
+    variants: StructuralVariant[],
+    filters: OQLFilter[]
+): OQLFilter[] {
+    const alterations = buildAlterations([], [], variants);
+
+    return filters.filter(
+        filter =>
+            filter.criterionType === 'incl' &&
+            alterations.some(alteration =>
+                alterationMatcher(alteration, filter)
+            )
+    );
 }

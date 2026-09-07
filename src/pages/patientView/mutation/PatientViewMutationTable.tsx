@@ -26,6 +26,9 @@ import _ from 'lodash';
 import { createMutationNamespaceColumns } from 'shared/components/mutationTable/MutationTableUtils';
 import { getServerConfig } from 'config/config';
 import { adjustVisibility } from 'shared/components/alterationsTableUtils';
+import { OQLFilter } from 'pages/studyView/tabs/LocalClinicalTrialsHelperFunctions/LocalCTInterfaces';
+import { getMatchingInclusionMutationFilters } from 'pages/studyView/tabs/LocalClinicalTrialsHelperFunctions/LocalCTTools';
+import { LocalTrialsCell } from 'pages/patientView/LocalCT/LocalCTMouseover';
 
 export interface IPatientViewMutationTableProps extends IMutationTableProps {
     sampleManager: SampleManager | null;
@@ -39,6 +42,7 @@ export interface IPatientViewMutationTableProps extends IMutationTableProps {
     disableTooltip?: boolean;
     existsSomeMutationWithAscnProperty: { [property: string]: boolean };
     alleleFreqHeaderRender?: (name: string) => JSX.Element;
+    localTrialMutationFilters?: OQLFilter[];
 }
 
 export const defaultAlleleFrequencyHeaderTooltip = (
@@ -65,6 +69,7 @@ export default class PatientViewMutationTable extends MutationTable<
             MutationTableColumnType.ASCN_METHOD,
             MutationTableColumnType.ASCN_COPY_NUM,
             MutationTableColumnType.ANNOTATION,
+            MutationTableColumnType.LOCAL_TRIALS,
             MutationTableColumnType.CUSTOM_DRIVER,
             MutationTableColumnType.CUSTOM_DRIVER_TIER,
             MutationTableColumnType.HGVSG,
@@ -110,6 +115,50 @@ export default class PatientViewMutationTable extends MutationTable<
 
     protected generateColumns() {
         super.generateColumns();
+
+        this._columns[MutationTableColumnType.LOCAL_TRIALS] = {
+            name: MutationTableColumnType.LOCAL_TRIALS,
+            width: 100,
+
+            render: (mutations: Mutation[]) => {
+                const matches = getMatchingInclusionMutationFilters(
+                    mutations,
+                    this.props.localTrialMutationFilters ?? []
+                );
+
+                if (matches.length === 0) {
+                    return <div />;
+                }
+
+                return (LocalTrialsCell as any)({ filters: matches });
+            },
+
+            download: (mutations: Mutation[]) => {
+                const matches = getMatchingInclusionMutationFilters(
+                    mutations,
+                    this.props.localTrialMutationFilters ?? []
+                );
+
+                return matches.length > 0 ? 'Yes' : '';
+            },
+
+            sortBy: (mutations: Mutation[]) =>
+                getMatchingInclusionMutationFilters(
+                    mutations,
+                    this.props.localTrialMutationFilters ?? []
+                ).length,
+
+            tooltip: (
+                <span>
+                    Local clinical trials with a matching molecular inclusion
+                    criterion
+                </span>
+            ),
+
+            visible: true,
+            align: 'center',
+            order: 35.5,
+        };
 
         this._columns[MutationTableColumnType.TUMOR_ALLELE_FREQ] = {
             name: 'Allele Freq',

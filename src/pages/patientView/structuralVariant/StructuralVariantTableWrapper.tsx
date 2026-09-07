@@ -32,6 +32,8 @@ import { createNamespaceColumns } from 'shared/components/namespaceColumns/names
 import { ISharedTherapyRecommendationData } from 'cbioportal-utils';
 import CustomDriverTierColumnFormatter from './column/CustomDriverTierColumnFormatter';
 import CustomDriverColumnFormatter from './column/CustomDriverColumnFormatter';
+import { LocalTrialsCell } from 'pages/patientView/LocalCT/LocalCTMouseover';
+import { getMatchingInclusionSvFilters } from 'pages/studyView/tabs/LocalClinicalTrialsHelperFunctions/LocalCTTools';
 
 export interface IStructuralVariantTableWrapperProps {
     store: PatientViewPageStore;
@@ -342,6 +344,34 @@ export default class StructuralVariantTableWrapper extends React.Component<
                     );
                 },
                 order: 45,
+            });
+
+            columns.push({
+                name: 'Local Trials',
+                render: (d: StructuralVariant[]) => (
+                    <LocalTrialsCell
+                        filters={getMatchingInclusionSvFilters(
+                            d,
+                            this.props.store.localCTBundle.isComplete
+                                ? this.props.store.localCTBundle.result!
+                                      .aggregateFilters.OQLFilterSV
+                                : []
+                        )}
+                    />
+                ),
+                download: () => '',
+                sortBy: (d: StructuralVariant[]) =>
+                    getMatchingInclusionSvFilters(
+                        d,
+                        this.props.store.localCTBundle.isComplete
+                            ? this.props.store.localCTBundle.result!
+                                  .aggregateFilters.OQLFilterSV
+                            : []
+                    ).length,
+                width: 70,
+                align: 'center',
+                visible: true,
+                order: 45.5,
             });
 
             columns.push({

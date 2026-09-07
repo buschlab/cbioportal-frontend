@@ -248,8 +248,10 @@ import {
     RecruitingStatus,
     recruitingStatusLabel,
 } from 'shared/enums/ClinicalTrialsGovRecruitingStatus';
-import { ageAsNumber } from '../clinicalTrialMatch/utils/AgeSexConverter';
 import { City } from '../clinicalTrialMatch/ClinicalTrialMatchSelectUtil';
+import { getLocalCTBundle } from 'pages/studyView/tabs/LocalClinicalTrialsHelperFunctions/LocalCT';
+
+import { LocalCTBundle } from 'pages/studyView/tabs/LocalClinicalTrialsHelperFunctions/LocalCTInterfaces';
 
 type PageMode = 'patient' | 'sample';
 type ResourceId = string;
@@ -569,6 +571,10 @@ export class PatientViewPageStore {
                 this.molecularProfilesInStudy,
                 this.studyId
             ),
+    });
+
+    readonly localCTBundle = remoteData<LocalCTBundle>({
+        invoke: () => getLocalCTBundle(),
     });
 
     // this is a string of concatenated ids

@@ -195,6 +195,7 @@ export enum MutationTableColumnType {
     NORMAL_ALLELE_FREQ = 'Allele Freq (N)',
     FUNCTIONAL_IMPACT = 'Functional Impact',
     ANNOTATION = 'Annotation',
+    LOCAL_TRIALS = 'Local Trials',
     CUSTOM_DRIVER = 'Custom Driver',
     CUSTOM_DRIVER_TIER = 'Custom Driver Tier',
     HGVSG = 'HGVSg',
