@@ -337,7 +337,7 @@ export default class CopyNumberTableWrapper extends React.Component<
                 ).length,
             width: 70,
             align: 'center',
-            visible: true,
+            visible: getServerConfig().local_ct_enabled ? true : false,
             order: 51,
         });
 

@@ -370,7 +370,7 @@ export default class StructuralVariantTableWrapper extends React.Component<
                     ).length,
                 width: 70,
                 align: 'center',
-                visible: true,
+                visible: getServerConfig().local_ct_enabled ? true : false,
                 order: 45.5,
             });
 

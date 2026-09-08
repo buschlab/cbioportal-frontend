@@ -155,7 +155,7 @@ export default class PatientViewMutationTable extends MutationTable<
                 </span>
             ),
 
-            visible: true,
+            visible: getServerConfig().local_ct_enabled ? true : false,
             align: 'center',
             order: 35.5,
         };
