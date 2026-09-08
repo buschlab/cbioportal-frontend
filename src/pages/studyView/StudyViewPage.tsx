@@ -16,6 +16,7 @@ import {
 } from 'pages/studyView/StudyViewPageTabs';
 import LoadingIndicator from 'shared/components/loadingIndicator/LoadingIndicator';
 import { ClinicalDataTab } from './tabs/ClinicalDataTab';
+import LocalClinicalTrialsMatch from './tabs/LocalClinicalTrialsMatch';
 import {
     DefaultTooltip,
     getBrowserWindow,
@@ -759,7 +760,34 @@ export default class StudyViewPage extends React.Component<
                                             urlWrapper={this.urlWrapper}
                                         />
                                     </MSKTab>
-
+                                    {
+                                        <MSKTab
+                                            key={6}
+                                            id={
+                                                StudyViewPageTabKeyEnum.LOCAL_CT_MATCH
+                                            }
+                                            hide={
+                                                !getServerConfig()
+                                                    .local_ct_enabled
+                                            }
+                                            linkText={
+                                                <span>
+                                                    {
+                                                        StudyViewPageTabDescriptions.LOCAL_CT_MATCH
+                                                    }{' '}
+                                                    <strong
+                                                        className={'beta-text'}
+                                                    >
+                                                        Beta!
+                                                    </strong>
+                                                </span>
+                                            }
+                                        >
+                                            <LocalClinicalTrialsMatch
+                                                store={this.store}
+                                            />
+                                        </MSKTab>
+                                    }
                                     {this.resourceTabs.component}
                                     {this.customTabs}
                                 </MSKTabs>

@@ -289,6 +289,13 @@ export default class MutationTableWrapper extends React.Component<
                                 }
                                 namespaceColumns={this.props.namespaceColumns}
                                 columns={this.props.columns}
+                                localTrialMutationFilters={
+                                    this.pageStore.localCTBundle.isComplete
+                                        ? this.pageStore.localCTBundle.result
+                                              .aggregateFilters
+                                              .OQLFilterMutation
+                                        : []
+                                }
                                 alleleFreqHeaderRender={
                                     this.props.alleleFreqHeaderRender
                                 }

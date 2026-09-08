@@ -5,6 +5,7 @@ export enum StudyViewPageTabKeyEnum {
     CN_SEGMENTS = 'cnSegments',
     FILES_AND_LINKS = 'filesAndLinks',
     PLOTS = 'plots',
+    LOCAL_CT_MATCH = 'Local Clinical Trials',
 }
 
 export const StudyViewResourceTabPrefix = 'openResource_';

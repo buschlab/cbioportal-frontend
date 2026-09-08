@@ -131,6 +131,7 @@ export interface IServerConfig {
     skin_hide_download_controls: string;
     show_mdacc_heatmap: boolean;
     quick_search_enabled: boolean;
+    local_ct_enabled: boolean;
     default_cross_cancer_study_list: string; // this has a default
     default_cross_cancer_study_list_name: string; // this has a default
     default_cross_cancer_study_session_id: string | null;

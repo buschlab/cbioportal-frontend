@@ -1,7 +1,7 @@
 import { getBrowserWindow } from 'cbioportal-frontend-commons';
 import { getServerConfig } from 'config/config';
 
-export const DEFAULT_ONCOKB_CONTENT_WIDTH = 22;
+export const DEFAULT_ONCOKB_CONTENT_WIDTH = 12;
 
 export function calculateOncoKbContentWidth(
     annotationElementId: string,
@@ -49,7 +49,7 @@ export function calculateOncoKbContentWidthWithInterval(
 }
 
 export function calculateOncoKbContentPadding(oncoKbContentWidth?: number) {
-    return oncoKbContentWidth || 0 > 22 ? oncoKbContentWidth! - 22 : 0;
+    return oncoKbContentWidth || 0 > 12 ? oncoKbContentWidth! - 12 : 0;
 }
 
 export function saveOncoKbIconStyleToLocalStorage(style: {

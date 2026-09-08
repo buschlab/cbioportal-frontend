@@ -1,0 +1,124 @@
+{
+	"studies": [
+		{
+			"trialName": "MK-6482-015-Phase2",
+			"trialUrl": "https://clinicaltrials.gov/study/NCT04924075",
+			"inclusionCriteria": [
+				"EPAS1:MUT",
+				"FH:MUT",
+				"SDHA:MUT",
+				"SDHB:MUT",
+				"SDHC:MUT",
+				"SDHD:MUT",
+				"SDHAF2:MUT",
+				"EGLN1:MUT",
+				"EGLN2:MUT",
+				"MDH1:MUT",
+				"MDH2:MUT",
+				"ELOC:MUT"
+			],
+			"min_age": 12
+		},
+		{
+			"trialName":"Soratram",
+			"trialUrl":"https://www.quickqueck.de/detail/228/",
+			"inclusionCriteria":[
+				"BRAF:G460R",
+				"BRAF:G466A",
+				"BRAF:G466R",
+				"BRAF:G466V",
+				"BRAF:G466E",
+				"BRAF:N581S",
+				"BRAF:N581T",
+				"BRAF:N581I",
+				"BRAF:N581D",
+				"BRAF:D594E",
+				"BRAF:D594G",
+				"BRAF:D594N",
+				"BRAF:D594H",
+				"BRAF:A598T",
+				"BRAF:G596R"],
+			"exclusionCriteria":[
+				"BRAF:V600E",
+				"BRAF:V600K",
+				"BRAF:V600D",
+				"BRAF:V600R",
+				"BRAF:V600M"
+			],
+			"min_age": 18
+		},
+		{
+			"trialName":"ECI830 Single Agent or in Combination",
+			"inclusionCriteria":[
+				"CCNE1:AMP",
+				"CCNE1:GAIN"
+			],
+			"min_age": 18
+		},
+		{
+			"trialName":"FFS: Fantastical Fusion Study",
+			"inclusionCriteria":[
+				"TMPRSS2:ERG:FUSION",
+				"EML4:ALK:FUSION",
+				"ETV6:NTRK3:FUSION",
+				"FGFR3:TACC3:FUSION",
+				"SS18:SSX1:FUSION",
+				"BRAF:FUSION"
+			],
+			"min_age": 50,
+			"max_age": 70
+		},
+		{
+			"trialName":"FGFRx and FGFx Study",
+			"inclusionCriteria":[
+				"FGFR1:MUT",
+				"FGFR2:MUT",
+				"FGFR3:MUT",
+				"FGFR4:MUT",
+				"FGF1:MUT",
+				"FGF2:MUT",
+				"FGF3:MUT",
+				"FGF4:MUT",
+				"FGF5:MUT",
+				"FGF6:MUT",
+				"FGF7:MUT",
+				"FGF8:MUT",
+				"FGF9:MUT",
+				"FGF10:MUT",
+				"FGF11:MUT",
+				"FGF12:MUT",
+				"FGF13:MUT",
+				"FGF14:MUT",
+				"FGF16:MUT",
+				"FGF17:MUT",
+				"FGF18:MUT",
+				"FGF19:MUT",
+				"FGF20:MUT",
+				"FGF21:MUT",
+				"FGF22:MUT",
+				"FGF23:MUT"
+			],
+			"exclusionCriteria":[
+				"FGFR3:P451S",
+				"FGF14:K142I",
+				"FGF14:H2Y",
+				"FGF14:M1?"
+			]
+		},
+		{
+			"trialName": "HLA-A*02:01 Positive",
+			"inclusionCriteria": [
+				"Clinical:HLA:string:contains:A*02\\:01"
+			],
+			"min_age": 18,
+			"max_age": 65
+		},
+		{
+			"trialName": "TMB High",
+			"inclusionCriteria": [
+				"Clinical:CVR_TMB_SCORE:number:>:10"
+			],
+			"max_age": 70
+		}
+	]
+}

@@ -409,6 +409,7 @@ export enum StudyViewPageTabDescriptions {
     HEATMAPS = 'Heatmaps',
     CN_SEGMENTS = 'CN Segments',
     PLOTS = 'Plots',
+    LOCAL_CT_MATCH = 'Local Clinical Trials',
 }
 
 const DEFAULT_CHART_NAME = 'Custom Data';

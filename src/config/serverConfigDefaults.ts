@@ -93,6 +93,7 @@ export const ServerConfigDefaults: Partial<IServerConfig> = {
     skin_show_study_help_button: false,
     skin_show_tissue_image_tab: true,
     quick_search_enabled: false,
+    local_ct_enabled: true,
     default_cross_cancer_study_list:
         'laml_tcga_pan_can_atlas_2018,acc_tcga_pan_can_atlas_2018,blca_tcga_pan_can_atlas_2018,' +
         'lgg_tcga_pan_can_atlas_2018,brca_tcga_pan_can_atlas_2018,cesc_tcga_pan_can_atlas_2018,chol_tcga_pan_can_atlas_2018,' +

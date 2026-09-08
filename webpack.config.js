@@ -407,6 +407,15 @@ var config = {
             publicPath: '/',
             stats: 'errors-only',
         },
+        proxy: [
+            {
+                context: ['/quickqueck'],
+                target: 'https://www.quickqueck.de',
+                pathRewrite: { '^/quickqueck': '' },
+                changeOrigin: true,
+                secure: true,
+            },
+        ],
     },
 };
 

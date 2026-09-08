@@ -37,6 +37,8 @@ import { DownloadControlOption } from 'cbioportal-frontend-commons';
 import { ISharedTherapyRecommendationData } from 'cbioportal-utils';
 import CustomDriverColumnFormatter from './column/CustomDriverColumnFormatter';
 import CustomDriverTierColumnFormatter from './column/CustomDriverTierColumnFormatter';
+import { LocalTrialsCell } from 'pages/patientView/LocalCT/LocalCTMouseover';
+import { getMatchingInclusionCnaFilters } from 'pages/studyView/tabs/LocalClinicalTrialsHelperFunctions/LocalCTTools';
 
 export const TABLE_FEATURE_INSTRUCTION =
     'Click on a CNA row to zoom in on the gene in the IGV browser above';
@@ -309,6 +311,34 @@ export default class CopyNumberTableWrapper extends React.Component<
                 );
             },
             order: 50,
+        });
+
+        columns.push({
+            name: 'Local Trials',
+            render: (d: DiscreteCopyNumberData[]) => (
+                <LocalTrialsCell
+                    filters={getMatchingInclusionCnaFilters(
+                        d,
+                        this.pageStore.localCTBundle.isComplete
+                            ? this.pageStore.localCTBundle.result!
+                                  .aggregateFilters.OQLFilterCNA
+                            : []
+                    )}
+                />
+            ),
+            download: () => '',
+            sortBy: (d: DiscreteCopyNumberData[]) =>
+                getMatchingInclusionCnaFilters(
+                    d,
+                    this.pageStore.localCTBundle.isComplete
+                        ? this.pageStore.localCTBundle.result!.aggregateFilters
+                              .OQLFilterCNA
+                        : []
+                ).length,
+            width: 70,
+            align: 'center',
+            visible: getServerConfig().local_ct_enabled ? true : false,
+            order: 51,
         });
 
         columns.push({

@@ -27,6 +27,7 @@ import SampleManager from 'pages/patientView/SampleManager';
 import PatientViewPage from 'pages/patientView/PatientViewPage';
 import PatientViewUrlWrapper from 'pages/patientView/PatientViewUrlWrapper';
 import { ClinicalTrialMatchTable } from './clinicalTrialMatch/ClinicalTrialMatchTable';
+import QuickqueckTab from './quickqueck/quickqueckTab';
 import MtbTable from './therapyRecommendation/MtbTable';
 import { CompactVAFPlot } from 'pages/patientView/genomicOverview/CompactVAFPlot';
 import {
@@ -59,6 +60,7 @@ export enum PatientViewPageTabs {
     FollowUp = 'followUp',
     ClinicalTrialsGov = 'clinicaltrialsGov',
     Proms = 'proms',
+    Quickqueck = 'quickqueck',
 }
 
 export const PatientViewResourceTabPrefix = 'openResource_';
@@ -888,6 +890,39 @@ export function tabs(
                 />
             </MSKTab>
         );
+
+    tabs.push(
+        <MSKTab
+            key={46}
+            id={PatientViewPageTabs.Quickqueck}
+            linkText={
+                <>
+                    QuickQueck{' '}
+                    <strong
+                        className={'beta-text'}
+                        style={{ marginLeft: '4px' }}
+                    >
+                        Beta!
+                    </strong>
+                </>
+            }
+            unmountOnHide={false}
+        >
+            <QuickqueckTab
+                mutations={
+                    pageComponent.patientViewPageStore
+                        .mergedMutationDataFilteredByGene
+                }
+                copyNumberAlterations={
+                    pageComponent.patientViewPageStore.mergedDiscreteCNAData
+                }
+                structuralVariants={
+                    pageComponent.patientViewPageStore.structuralVariantData
+                        .result ?? []
+                }
+            />
+        </MSKTab>
+    );
 
     tabs.push(
         <MSKTab
